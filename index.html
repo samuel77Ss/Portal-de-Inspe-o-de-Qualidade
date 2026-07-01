@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal de Inspeção de Qualidade</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1b2a; color: #e0e6f0; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 100%);
+    border-bottom: 2px solid #1e5fa8;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon { width: 44px; height: 44px; background: #1e5fa8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .logo-text h1 { font-size: 18px; font-weight: 700; color: #fff; }
+  .logo-text p { font-size: 12px; color: #7aa3cc; }
+  .header-date { font-size: 13px; color: #7aa3cc; text-align: right; }
+  .header-date strong { display: block; font-size: 15px; color: #e0e6f0; }
+
+  .upload-zone {
+    max-width: 680px; margin: 48px auto; padding: 0 20px;
+    text-align: center;
+  }
+  .upload-box {
+    border: 2px dashed #1e5fa8;
+    border-radius: 16px;
+    padding: 48px 32px;
+    background: #0f2240;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .upload-box:hover { border-color: #3a8fd4; background: #122a50; }
+  .upload-box svg { width: 56px; height: 56px; color: #1e5fa8; margin-bottom: 16px; }
+  .upload-box h2 { font-size: 20px; color: #e0e6f0; margin-bottom: 8px; }
+  .upload-box p { color: #7aa3cc; font-size: 14px; margin-bottom: 24px; }
+  .btn-upload {
+    background: #1e5fa8; color: #fff; border: none;
+    padding: 12px 32px; border-radius: 8px; font-size: 15px;
+    cursor: pointer; font-weight: 600; transition: background 0.2s;
+  }
+  .btn-upload:hover { background: #2673c2; }
+  #file-input { display: none; }
+
+  .dashboard { display: none; padding: 24px 28px; }
+
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 24px;
+  }
+  .top-bar h2 { font-size: 16px; color: #7aa3cc; font-weight: 400; }
+  .top-bar strong { display: block; font-size: 22px; color: #fff; }
+
+  .filter-row {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px;
+  }
+  select, input[type="date"] {
+    background: #0f2240; border: 1px solid #1e4a7a; color: #e0e6f0;
+    padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    cursor: pointer;
+  }
+  select:focus, input[type="date"]:focus { outline: none; border-color: #3a8fd4; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px; margin-bottom: 28px;
+  }
+  .kpi {
+    background: #0f2240; border: 1px solid #1e4a7a;
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .kpi-label { font-size: 12px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 30px; font-weight: 700; }
+  .kpi-value.blue { color: #4da3e8; }
+  .kpi-value.green { color: #4caf82; }
+  .kpi-value.amber { color: #f0a030; }
+  .kpi-value.red { color: #e05a5a; }
+
+  .inspectors-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .inspector-card {
+    background: #0f2240; border: 1px solid #1e4a7a;
+    border-radius: 12px; padding: 18px;
+    transition: border-color 0.2s;
+  }
+  .inspector-card:hover { border-color: #3a8fd4; }
+  .inspector-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .inspector-info h3 { font-size: 15px; color: #e0e6f0; }
+  .inspector-info span { font-size: 12px; color: #7aa3cc; }
+  .inspector-stats {
+    display: flex; gap: 10px;
+  }
+  .stat-box {
+    flex: 1; background: #0a1628; border-radius: 8px;
+    padding: 10px; text-align: center;
+  }
+  .stat-box .n { font-size: 22px; font-weight: 700; }
+  .stat-box .l { font-size: 11px; color: #7aa3cc; margin-top: 2px; }
+  .stat-box.blue .n { color: #4da3e8; }
+  .stat-box.green .n { color: #4caf82; }
+  .stat-box.amber .n { color: #f0a030; }
+
+  .section-title {
+    font-size: 14px; color: #7aa3cc; text-transform: uppercase;
+    letter-spacing: 0.7px; margin-bottom: 14px; font-weight: 600;
+  }
+
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #1e4a7a; margin-bottom: 28px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #0a1628; }
+  thead th {
+    padding: 12px 14px; text-align: left;
+    color: #7aa3cc; font-weight: 600;
+    text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;
+    border-bottom: 1px solid #1e4a7a; white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid #0f2240; transition: background 0.1s; }
+  tbody tr:hover { background: #122a50; }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 11px 14px; color: #c8d8ec; vertical-align: middle; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-green { background: #0d3320; color: #4caf82; border: 1px solid #1a5c38; }
+  .badge-blue { background: #0a1f3a; color: #4da3e8; border: 1px solid #1a3f6a; }
+  .badge-amber { background: #2a1a00; color: #f0a030; border: 1px solid #5a3800; }
+  .badge-red { background: #2a0d0d; color: #e05a5a; border: 1px solid #5a1a1a; }
+  .badge-gray { background: #1a2233; color: #7aa3cc; border: 1px solid #2a3a55; }
+
+  .alert-icon { color: #f0a030; font-size: 15px; }
+
+  .disc-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700;
+    background: #1e3a5c; color: #4da3e8;
+  }
+
+  .btn-reset {
+    background: transparent; border: 1px solid #1e4a7a;
+    color: #7aa3cc; padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; transition: all 0.2s;
+  }
+  .btn-reset:hover { border-color: #3a8fd4; color: #e0e6f0; }
+
+  .tab-row {
+    display: flex; gap: 4px; margin-bottom: 20px;
+    border-bottom: 1px solid #1e4a7a; padding-bottom: 0;
+  }
+  .tab {
+    padding: 10px 18px; border-radius: 8px 8px 0 0;
+    cursor: pointer; font-size: 13px; color: #7aa3cc;
+    border: 1px solid transparent; border-bottom: none;
+    transition: all 0.2s; background: transparent;
+  }
+  .tab:hover { color: #e0e6f0; }
+  .tab.active {
+    background: #0f2240; color: #4da3e8;
+    border-color: #1e4a7a; font-weight: 600;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .empty-state {
+    text-align: center; padding: 48px; color: #7aa3cc;
+  }
+  .empty-state p { margin-top: 10px; font-size: 14px; }
+
+  footer {
+    text-align: center; padding: 24px;
+    color: #3a5a7a; font-size: 12px;
+    border-top: 1px solid #1e4a7a; margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏗️</div>
+    <div class="logo-text">
+      <h1>Portal de Inspeção de Qualidade</h1>
+      <p>Milplan Engenharia · Gestão de Obras AMR</p>
+    </div>
+  </div>
+  <div class="header-date" id="header-date">
+    <strong id="today-label">—</strong>
+    <span>Data de referência</span>
+  </div>
+</header>
+
+<div class="upload-zone" id="upload-zone">
+  <div class="upload-box" id="drop-zone">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+    </svg>
+    <h2>Carregar Relatório Diário</h2>
+    <p>Arraste o arquivo Excel aqui ou clique para selecionar<br>
+    <small>Compatível com: <strong>Relatorio_diario_de_inspetores.xlsx</strong></small></p>
+    <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+      📂 Selecionar arquivo .xlsx
+    </button>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+  </div>
+</div>
+
+<div class="dashboard" id="dashboard">
+
+  <div class="top-bar">
+    <div>
+      <h2>Painel de Inspeção</h2>
+      <strong id="dash-title">—</strong>
+    </div>
+    <button class="btn-reset" onclick="resetPortal()">🔄 Carregar outro arquivo</button>
+  </div>
+
+  <div class="filter-row">
+    <select id="filter-date" onchange="applyFilters()">
+      <option value="">📅 Todas as datas</option>
+    </select>
+    <select id="filter-inspector" onchange="applyFilters()">
+      <option value="">👤 Todos os inspetores</option>
+    </select>
+    <select id="filter-disc" onchange="applyFilters()">
+      <option value="">🔧 Todas as disciplinas</option>
+    </select>
+    <select id="filter-status" onchange="applyFilters()">
+      <option value="">📋 Todos os status</option>
+    </select>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Total de Atividades</div><div class="kpi-value blue" id="kpi-total">0</div></div>
+    <div class="kpi"><div class="kpi-label">✅ Aprovadas / OK</div><div class="kpi-value green" id="kpi-ok">0</div></div>
+    <div class="kpi"><div class="kpi-label">⚠️ Pendências / Alerta</div><div class="kpi-value amber" id="kpi-pend">0</div></div>
+    <div class="kpi"><div class="kpi-label">❌ Reprovadas</div><div class="kpi-value red" id="kpi-rep">0</div></div>
+    <div class="kpi"><div class="kpi-label">🔄 Em Andamento</div><div class="kpi-value blue" id="kpi-and">0</div></div>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab active" onclick="switchTab('inspectors')">👥 Por Inspetor</button>
+    <button class="tab" onclick="switchTab('activities')">📋 Atividades</button>
+    <button class="tab" onclick="switchTab('alerts')">⚠️ Alertas</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-inspectors">
+    <div class="section-title">Resumo por inspetor</div>
+    <div class="inspectors-grid" id="inspectors-grid"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-activities">
+    <div class="section-title">Todas as atividades</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Inspetor</th>
+            <th>Disc.</th>
+            <th>Área</th>
+            <th>Supervisor</th>
+            <th>Atividade</th>
+            <th>Status</th>
+            <th>⚠️</th>
+          </tr>
+        </thead>
+        <tbody id="activities-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-alerts">
+    <div class="section-title">Itens com alerta / pendência</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Inspetor</th>
+            <th>Área</th>
+            <th>Atividade</th>
+            <th>Status</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody id="alerts-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>Portal de Inspeção de Qualidade · Milplan Engenharia · Dados carregados localmente — nenhum arquivo é enviado à internet</footer>
+
+<script>
+let allData = [];
+let filteredData = [];
+
+function excelDateToJS(serial) {
+  if (!serial || isNaN(serial)) return null;
+  const d = new Date(Math.round((serial - 25569) * 86400 * 1000));
+  return d;
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('pt-BR');
+}
+
+function excelDateStr(serial) {
+  const d = excelDateToJS(serial);
+  if (!d) return '';
+  return d.toISOString().split('T')[0];
+}
+
+const AVATAR_COLORS = ['#1e5fa8','#2a7a5a','#7a3a9a','#a85a1e','#1e7a7a','#7a1e4a','#4a7a1e','#5a1e7a'];
+const avatarMap = {};
+let avatarIdx = 0;
+
+function getAvatar(name) {
+  if (!avatarMap[name]) {
+    avatarMap[name] = AVATAR_COLORS[avatarIdx % AVATAR_COLORS.length];
+    avatarIdx++;
+  }
+  return avatarMap[name];
+}
+
+function initials(name) {
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+
+function statusBadge(s) {
+  s = (s||'').trim();
+  const sl = s.toLowerCase();
+  if (sl.includes('aprovado') || sl.includes('inspecionado ok') || sl.includes('finalizado') || sl.includes('recebido')) {
+    return `<span class="badge badge-green">${s}</span>`;
+  } else if (sl.includes('reprovado') || sl.includes('não conforme')) {
+    return `<span class="badge badge-red">${s}</span>`;
+  } else if (sl.includes('pendência') || sl.includes('não finalizado') || sl.includes('reprovado parcial')) {
+    return `<span class="badge badge-amber">${s}</span>`;
+  } else if (sl.includes('andamento') || sl.includes('acompanhamento')) {
+    return `<span class="badge badge-blue">${s}</span>`;
+  }
+  return `<span class="badge badge-gray">${s}</span>`;
+}
+
+function isOk(s) {
+  s = (s||'').toLowerCase();
+  return s.includes('aprovado') || s.includes('inspecionado ok') || s.includes('finalizado') || s.includes('recebido');
+}
+function isReprovado(s) {
+  s = (s||'').toLowerCase();
+  return s.includes('reprovado');
+}
+function isPendencia(s, alerta) {
+  return !!(alerta) || (s||'').toLowerCase().includes('não finalizado') || (s||'').toLowerCase().includes('pendência');
+}
+
+function loadXLSX(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const wb = XLSX.read(e.target.result, {type:'binary'});
+    const sheetName = wb.SheetNames.find(n => n.toLowerCase().includes('log')) || wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+    allData = rows.map(r => ({
+      data: r['DATA'] || r['Data'] || r['data'] || '',
+      inspetor: (r['INSPETOR'] || r['Inspetor'] || '').trim(),
+      disc: (r['DISC.'] || r['Disc.'] || r['DISCIPLINA'] || '').trim(),
+      area: (r['ÁREA'] || r['AREA'] || r['Área'] || '').trim(),
+      supervisor: (r['SUPERVISOR'] || r['Supervisor'] || '').trim(),
+      atividade: (r['ATIVIDADE'] || r['Atividade'] || '').trim(),
+      unid: (r['UNID.'] || '').trim(),
+      qtd: (r['QTD'] || '').toString().trim(),
+      status: (r['STATUS'] || r['Status'] || '').trim(),
+      alerta: (r['ALERTA'] || '').trim(),
+      obs: (r['OBSERVAÇÃO'] || r['OBSERVACAO'] || '').trim(),
+    })).filter(r => r.inspetor);
+
+    buildFilters();
+    applyFilters();
+    document.getElementById('upload-zone').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+    const now = new Date();
+    document.getElementById('today-label').textContent = now.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    document.getElementById('dash-title').textContent = `${allData.length} atividades carregadas`;
+  };
+  reader.readAsBinaryString(file);
+}
+
+function buildFilters() {
+  const dates = [...new Set(allData.map(r=>r.data).filter(Boolean))].sort();
+  const inspectors = [...new Set(allData.map(r=>r.inspetor).filter(Boolean))].sort();
+  const discs = [...new Set(allData.map(r=>r.disc).filter(Boolean))].sort();
+  const statuses = [...new Set(allData.map(r=>r.status).filter(Boolean))].sort();
+
+  const fd = document.getElementById('filter-date');
+  fd.innerHTML = '<option value="">📅 Todas as datas</option>';
+  dates.forEach(d => {
+    const label = typeof d === 'number' ? formatDate(excelDateToJS(d)) : d;
+    fd.innerHTML += `<option value="${d}">${label}</option>`;
+  });
+
+  const fi = document.getElementById('filter-inspector');
+  fi.innerHTML = '<option value="">👤 Todos os inspetores</option>';
+  inspectors.forEach(i => { fi.innerHTML += `<option value="${i}">${i}</option>`; });
+
+  const fd2 = document.getElementById('filter-disc');
+  fd2.innerHTML = '<option value="">🔧 Todas as disciplinas</option>';
+  discs.forEach(d => { fd2.innerHTML += `<option value="${d}">${d}</option>`; });
+
+  const fs = document.getElementById('filter-status');
+  fs.innerHTML = '<option value="">📋 Todos os status</option>';
+  statuses.forEach(s => { fs.innerHTML += `<option value="${s}">${s}</option>`; });
+}
+
+function applyFilters() {
+  const fDate = document.getElementById('filter-date').value;
+  const fInsp = document.getElementById('filter-inspector').value;
+  const fDisc = document.getElementById('filter-disc').value;
+  const fStat = document.getElementById('filter-status').value;
+
+  filteredData = allData.filter(r => {
+    if (fDate && String(r.data) !== String(fDate)) return false;
+    if (fInsp && r.inspetor !== fInsp) return false;
+    if (fDisc && r.disc !== fDisc) return false;
+    if (fStat && r.status !== fStat) return false;
+    return true;
+  });
+
+  updateKPIs();
+  updateInspectors();
+  updateActivities();
+  updateAlerts();
+}
+
+function updateKPIs() {
+  const total = filteredData.length;
+  const ok = filteredData.filter(r => isOk(r.status)).length;
+  const rep = filteredData.filter(r => isReprovado(r.status)).length;
+  const pend = filteredData.filter(r => isPendencia(r.status, r.alerta)).length;
+  const and = filteredData.filter(r => (r.status||'').toLowerCase().includes('andamento') || (r.status||'').toLowerCase().includes('acompanhamento')).length;
+
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-ok').textContent = ok;
+  document.getElementById('kpi-pend').textContent = pend;
+  document.getElementById('kpi-rep').textContent = rep;
+  document.getElementById('kpi-and').textContent = and;
+}
+
+function updateInspectors() {
+  const byInsp = {};
+  filteredData.forEach(r => {
+    if (!byInsp[r.inspetor]) byInsp[r.inspetor] = {total:0,ok:0,pend:0,discs:new Set()};
+    byInsp[r.inspetor].total++;
+    if (isOk(r.status)) byInsp[r.inspetor].ok++;
+    if (isPendencia(r.status, r.alerta)) byInsp[r.inspetor].pend++;
+    if (r.disc) byInsp[r.inspetor].discs.add(r.disc);
+  });
+
+  const grid = document.getElementById('inspectors-grid');
+  if (!Object.keys(byInsp).length) {
+    grid.innerHTML = '<div class="empty-state"><p>Nenhum dado para exibir</p></div>';
+    return;
+  }
+
+  grid.innerHTML = Object.entries(byInsp).sort((a,b)=>b[1].total-a[1].total).map(([name,d])=>`
+    <div class="inspector-card">
+      <div class="inspector-header">
+        <div class="avatar" style="background:${getAvatar(name)}">${initials(name)}</div>
+        <div class="inspector-info">
+          <h3>${name}</h3>
+          <span>${[...d.discs].join(' · ')}</span>
+        </div>
+      </div>
+      <div class="inspector-stats">
+        <div class="stat-box blue"><div class="n">${d.total}</div><div class="l">Total</div></div>
+        <div class="stat-box green"><div class="n">${d.ok}</div><div class="l">OK</div></div>
+        <div class="stat-box amber"><div class="n">${d.pend}</div><div class="l">Alertas</div></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateActivities() {
+  const tbody = document.getElementById('activities-body');
+  if (!filteredData.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#7aa3cc">Nenhuma atividade encontrada</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = [...filteredData].reverse().map(r => {
+    const dateStr = typeof r.data === 'number' ? formatDate(excelDateToJS(r.data)) : r.data;
+    return `<tr>
+      <td style="white-space:nowrap">${dateStr}</td>
+      <td><span style="display:flex;align-items:center;gap:8px">
+        <span class="avatar" style="background:${getAvatar(r.inspetor)};width:26px;height:26px;font-size:11px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${initials(r.inspetor)}</span>
+        ${r.inspetor}
+      </span></td>
+      <td><span class="disc-tag">${r.disc}</span></td>
+      <td style="white-space:nowrap">${r.area||'—'}</td>
+      <td>${r.supervisor||'—'}</td>
+      <td style="max-width:280px">${r.atividade}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td>${r.alerta ? '<span class="alert-icon">⚠️</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateAlerts() {
+  const alerts = filteredData.filter(r => r.alerta || isPendencia(r.status, r.alerta) || isReprovado(r.status));
+  const tbody = document.getElementById('alerts-body');
+
+  if (!alerts.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:#4caf82">✅ Nenhum alerta ou pendência nos dados filtrados</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = alerts.map(r => {
+    const dateStr = typeof r.data === 'number' ? formatDate(excelDateToJS(r.data)) : r.data;
+    return `<tr>
+      <td style="white-space:nowrap">${dateStr}</td>
+      <td>${r.inspetor}</td>
+      <td>${r.area||'—'}</td>
+      <td style="max-width:200px">${r.atividade}</td>
+      <td>${statusBadge(r.status)}</td>
+      <td style="max-width:250px;font-size:12px;color:#c8d8ec">${r.obs||r.alerta||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function resetPortal() {
+  allData = []; filteredData = [];
+  document.getElementById('upload-zone').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  Object.keys(avatarMap).forEach(k => delete avatarMap[k]);
+  avatarIdx = 0;
+}
+
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) loadXLSX(e.target.files[0]);
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='#3a8fd4'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor='#1e5fa8'; });
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.style.borderColor='#1e5fa8';
+  if (e.dataTransfer.files[0]) loadXLSX(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
