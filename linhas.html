@@ -143,6 +143,7 @@
     <select id="filter-cwa"><option value="">🏗️ Todas as CWAs</option></select>
     <label class="checkbox-label"><input type="checkbox" id="filter-pending"> Só com pendência/reprovado</label>
     <button class="btn" onclick="togglePanel()">➕ Nova linha</button>
+    <button class="btn ghost" id="btn-clean-legacy" onclick="cleanupLegacyDemos()" style="display:none">🧹 Remover exemplos antigos</button>
   </div>
 
   <div class="panel" id="panel-new">
@@ -189,6 +190,20 @@ function removeLine(id) {
   render();
 }
 
+// IDs de linhas de demonstração de versões anteriores desta ferramenta — não são cadastros reais
+const LEGACY_DEMO_IDS = [
+  'AMR-1006916-06-ATK-CP00-0416-PI-11-00062', // CWA-06, primeiro exemplo
+  'AMR-1006916-05-ATK-CP00-0415-PI-11-00089', // CWA-05, exemplo fictício
+];
+
+function cleanupLegacyDemos() {
+  const found = LEGACY_DEMO_IDS.filter(id => getLinha(id));
+  if (!found.length) { alert('Nenhum exemplo antigo encontrado — já está limpo.'); render(); return; }
+  if (!confirm(`Remover ${found.length} linha(s) de exemplo antiga(s)?\n\n${found.join('\n')}`)) return;
+  found.forEach(deleteLinha);
+  render();
+}
+
 function buildFilters(linhas) {
   const cwas = [...new Set(linhas.map(l => l.cwa || 'Sem CWA definida'))].sort();
   const sel = document.getElementById('filter-cwa');
@@ -205,6 +220,7 @@ function renderStrip(spools) {
 function render() {
   const linhas = loadLinhas();
   buildFilters(linhas);
+  document.getElementById('btn-clean-legacy').style.display = LEGACY_DEMO_IDS.some(id => getLinha(id)) ? '' : 'none';
 
   const search = document.getElementById('search').value.toLowerCase();
   const fCwa = document.getElementById('filter-cwa').value;
