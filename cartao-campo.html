@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cartão de Campo · Controle de Desenhos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1b2a; color: #e0e6f0; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 100%);
+    border-bottom: 2px solid #1e5fa8;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon { width: 44px; height: 44px; background: #1e5fa8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .logo-text h1 { font-size: 18px; font-weight: 700; color: #fff; }
+  .logo-text p { font-size: 12px; color: #7aa3cc; }
+  .nav-link {
+    color: #7aa3cc; font-size: 13px; text-decoration: none;
+    border: 1px solid #1e4a7a; padding: 8px 14px; border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .nav-link:hover { color: #e0e6f0; border-color: #3a8fd4; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 28px; }
+
+  .doc-card {
+    background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 20px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px 24px;
+  }
+  .doc-card div span.l { display: block; font-size: 11px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .doc-card div span.v { font-size: 14px; color: #e0e6f0; font-weight: 600; }
+  .doc-card div span.v.mono { font-family: 'Courier New', monospace; }
+
+  .hold-banner {
+    background: #2a1a00; border: 1px solid #5a3800; color: #f0a030;
+    border-radius: 10px; padding: 12px 16px; font-size: 13px;
+    margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .hold-banner b { color: #fff; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px; margin-bottom: 20px;
+  }
+  .kpi { background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px; padding: 16px 18px; }
+  .kpi-label { font-size: 11px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; }
+  .kpi-value.blue { color: #4da3e8; }
+  .kpi-value.green { color: #4caf82; }
+  .kpi-value.amber { color: #f0a030; }
+  .kpi-value.red { color: #e05a5a; }
+  .kpi-value.gray { color: #7aa3cc; }
+
+  .progress-bar { height: 6px; background: #0a1628; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .progress-bar i { display: block; height: 100%; background: #4caf82; transition: width 0.3s; }
+
+  .toolbar {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center;
+  }
+  input[type="text"], input[type="date"], select, textarea {
+    background: #0f2240; border: 1px solid #1e4a7a; color: #e0e6f0;
+    padding: 8px 12px; border-radius: 8px; font-size: 13px;
+    font-family: inherit;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: #3a8fd4; }
+  #search { min-width: 220px; flex: 1; }
+
+  .btn {
+    background: #1e5fa8; color: #fff; border: none;
+    padding: 9px 16px; border-radius: 8px; font-size: 13px;
+    cursor: pointer; font-weight: 600; transition: background 0.2s;
+  }
+  .btn:hover { background: #2673c2; }
+  .btn.ghost { background: transparent; border: 1px solid #1e4a7a; color: #7aa3cc; }
+  .btn.ghost:hover { border-color: #3a8fd4; color: #e0e6f0; }
+
+  .panel {
+    background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 20px; display: none;
+  }
+  .panel.open { display: block; }
+  .panel h3 { font-size: 13px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .panel-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .panel textarea { width: 100%; min-height: 90px; resize: vertical; }
+  .panel small { color: #5a7ca0; display: block; margin-top: 4px; }
+
+  .section-title {
+    font-size: 14px; color: #7aa3cc; text-transform: uppercase;
+    letter-spacing: 0.7px; margin: 22px 0 14px; font-weight: 600;
+  }
+
+  .cards-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: #0f2240; border: 1px solid #1e4a7a; border-radius: 14px;
+    padding: 14px 16px; position: relative; border-left: 5px solid #3a5a7a;
+    transition: border-color 0.2s;
+  }
+  .card.st-pendente { border-left-color: #5a6a80; }
+  .card.st-liberado { border-left-color: #1e5fa8; }
+  .card.st-aprovado { border-left-color: #2a7a5a; }
+  .card.st-reprovado { border-left-color: #a83a3a; }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .card-id { font-family: 'Courier New', monospace; font-size: 14px; font-weight: 700; color: #fff; word-break: break-all; }
+  .card-meta { font-size: 11px; color: #7aa3cc; margin-top: 2px; }
+  .card-del { background: none; border: none; color: #4a5a70; cursor: pointer; font-size: 14px; padding: 2px 4px; }
+  .card-del:hover { color: #e05a5a; }
+
+  .status-pill {
+    display: block; width: 100%; text-align: center;
+    padding: 7px 0; border-radius: 20px; font-size: 12px; font-weight: 700;
+    border: none; cursor: pointer; margin: 10px 0; letter-spacing: 0.3px;
+  }
+  .status-pill.st-pendente { background: #1a2233; color: #7aa3cc; }
+  .status-pill.st-liberado { background: #0a1f3a; color: #4da3e8; }
+  .status-pill.st-aprovado { background: #0d3320; color: #4caf82; }
+  .status-pill.st-reprovado { background: #2a0d0d; color: #e05a5a; }
+
+  .card-field { margin-bottom: 8px; }
+  .card-field label { display: block; font-size: 10px; color: #5a7ca0; text-transform: uppercase; margin-bottom: 3px; }
+  .card-field input, .card-field textarea {
+    width: 100%; padding: 6px 8px; font-size: 12px; background: #0a1628;
+  }
+  .card-field textarea { min-height: 44px; resize: vertical; }
+
+  .empty-state { text-align: center; padding: 48px; color: #7aa3cc; grid-column: 1 / -1; }
+
+  footer {
+    text-align: center; padding: 24px; color: #3a5a7a; font-size: 12px;
+    border-top: 1px solid #1e4a7a; margin-top: 30px;
+  }
+
+  @media print {
+    header, .toolbar, .panel, .card-del, footer, .btn { display: none !important; }
+    body { background: #fff; color: #000; }
+    .card, .doc-card, .kpi { border-color: #999 !important; background: #fff !important; }
+    .card-id, .card-meta, .kpi-value, .doc-card span.v { color: #000 !important; }
+    .cards-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🪪</div>
+    <div class="logo-text">
+      <h1>Cartão de Campo</h1>
+      <p>Controle de Desenhos · Tubulação — Milplan Engenharia</p>
+    </div>
+  </div>
+  <a class="nav-link" href="index.html">← Portal de Inspeção</a>
+</header>
+
+<div class="wrap">
+
+  <div class="doc-card">
+    <div><span class="l">Documento</span><span class="v mono" id="doc-num">AMR-1006916-06-ATK-CP00-0416-PI-11-00062</span></div>
+    <div><span class="l">Revisão</span><span class="v" id="doc-rev">1</span></div>
+    <div><span class="l">Isométrico</span><span class="v mono">22"-PP-0416-602-X15</span></div>
+    <div><span class="l">Projeto</span><span class="v">Flotação Recleaner — Remoagem</span></div>
+    <div><span class="l">Cliente / Projetista</span><span class="v">AngloAmerican / AtkinsRéalis</span></div>
+    <div><span class="l">Folhas</span><span class="v">6</span></div>
+  </div>
+
+  <div class="hold-banner">
+    <span>⚠️</span>
+    <div><b>HOLD 1 ativo nesta revisão:</b> projeto emitido antes do recebimento dos DFs certificados da bomba, amostrador e válvulas instrumentadas. Confirmar liberação do HOLD antes de aprovar os spools/itens afetados por ele.</div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Total de Spools</div><div class="kpi-value blue" id="kpi-total">0</div></div>
+    <div class="kpi"><div class="kpi-label">✅ Aprovados</div><div class="kpi-value green" id="kpi-aprovado">0</div></div>
+    <div class="kpi"><div class="kpi-label">🔄 Liberados</div><div class="kpi-value blue" id="kpi-liberado">0</div></div>
+    <div class="kpi"><div class="kpi-label">⏳ Pendentes</div><div class="kpi-value gray" id="kpi-pendente">0</div></div>
+    <div class="kpi"><div class="kpi-label">❌ Reprovados</div><div class="kpi-value red" id="kpi-reprovado">0</div></div>
+    <div class="kpi">
+      <div class="kpi-label">Progresso</div>
+      <div class="kpi-value green" id="kpi-pct">0%</div>
+      <div class="progress-bar"><i id="progress-fill" style="width:0%"></i></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="🔍 Buscar spool...">
+    <select id="filter-folha"><option value="">📄 Todas as folhas</option></select>
+    <select id="filter-status">
+      <option value="">📋 Todos os status</option>
+      <option value="pendente">⏳ Pendente</option>
+      <option value="liberado">🔄 Liberado</option>
+      <option value="aprovado">✅ Aprovado</option>
+      <option value="reprovado">❌ Reprovado</option>
+    </select>
+    <button class="btn ghost" onclick="togglePanel('panel-add')">➕ Adicionar spool</button>
+    <button class="btn ghost" onclick="togglePanel('panel-import')">📋 Importar lista</button>
+    <button class="btn ghost" onclick="exportCSV()">⬇️ Exportar CSV</button>
+    <button class="btn ghost" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+
+  <div class="panel" id="panel-add">
+    <h3>Adicionar spool manualmente</h3>
+    <div class="panel-row">
+      <input type="text" id="add-id" placeholder="Nº do spool (ex: SP-0416-00062-059)">
+      <input type="text" id="add-folha" placeholder="Folha (ex: 6/6)" style="max-width:120px">
+      <input type="text" id="add-dn" placeholder="DN (ex: 22&quot;)" style="max-width:100px">
+      <button class="btn" onclick="addSpool()">Adicionar</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-import">
+    <h3>Importar lista (colar do Excel/lista de materiais)</h3>
+    <div class="panel-row">
+      <textarea id="import-text" placeholder="Uma linha por spool: ID;Folha;DN&#10;Ex: SP-0416-00062-059;6/6;22&quot;"></textarea>
+    </div>
+    <div class="panel-row">
+      <button class="btn" onclick="importSpools()">Importar</button>
+      <small>Formato: <code>ID;Folha;DN</code> — Folha e DN são opcionais.</small>
+    </div>
+  </div>
+
+  <div class="section-title">Spools do isométrico</div>
+  <div class="cards-grid" id="cards-grid"></div>
+
+</div>
+
+<footer>
+  Cartão de Campo · Portal de Inspeção de Qualidade · Milplan Engenharia<br>
+  Lista de spools extraída do isométrico AMR-1006916-06-ATK-CP00-0416-PI-11-00062 Rev.1 (exemplo) — confira contra a lista oficial de materiais antes do uso em campo. Dados salvos apenas neste navegador.
+</footer>
+
+<script>
+const DOC_KEY = 'cartaoCampo_AMR-1006916-06-ATK-CP00-0416-PI-11-00062';
+
+const SEED_SPOOLS = [
+  ['SP-0416-00062-001','1/6'],['SP-0416-00062-002-AJ','1/6'],
+  ['SP-0416-00062-003','2/6'],['SP-0416-00062-004','2/6'],['SP-0416-00062-005','2/6'],
+  ['SP-0416-00062-006','2/6'],['SP-0416-00062-007','2/6'],['SP-0416-00062-008','2/6'],
+  ['SP-0416-00062-009-AJ','2/6'],['SP-0416-00062-010','2/6'],['SP-0416-00062-011','2/6'],['SP-0416-00062-012','2/6'],
+  ['SP-0416-00062-013','3/6'],['SP-0416-00062-014','3/6'],['SP-0416-00062-015','3/6'],['SP-0416-00062-016','3/6'],
+  ['SP-0416-00062-017','3/6'],['SP-0416-00062-018','3/6'],['SP-0416-00062-019','3/6'],['SP-0416-00062-020','3/6'],
+  ['SP-0416-00062-021','3/6'],['SP-0416-00062-022','3/6'],['SP-0416-00062-023','3/6'],['SP-0416-00062-024','3/6'],
+  ['SP-0416-00062-025','3/6'],['SP-0416-00062-026','3/6'],['SP-0416-00062-027','3/6'],['SP-0416-00062-028','3/6'],
+  ['SP-0416-00062-029','3/6'],['SP-0416-00062-030','3/6'],['SP-0416-00062-031-AJ','3/6'],
+  ['SP-0416-00062-032','4/6'],['SP-0416-00062-033','4/6'],['SP-0416-00062-034-AJ','4/6'],['SP-0416-00062-035-AJ','4/6'],
+  ['SP-0416-00062-036','4/6'],['SP-0416-00062-037','4/6'],['SP-0416-00062-038','4/6'],['SP-0416-00062-039','4/6'],
+  ['SP-0416-00062-040-AJ','4/6'],['SP-0416-00062-041','4/6'],['SP-0416-00062-042','4/6'],['SP-0416-00062-043','4/6'],
+  ['SP-0416-00062-044','4/6'],['SP-0416-00062-045','4/6'],['SP-0416-00062-046-AJ','4/6'],
+  ['SP-0416-00062-047','5/6'],['SP-0416-00062-048','5/6'],['SP-0416-00062-049','5/6'],
+  ['SP-0416-00062-050-AJ','5/6'],['SP-0416-00062-051','5/6'],['SP-0416-00062-058','5/6'],
+  ['SP-0416-00062-052','6/6'],['SP-0416-00062-053-AJ','6/6'],['SP-0416-00062-054','6/6'],
+  ['SP-0416-00062-055','6/6'],['SP-0416-00062-056','6/6'],['SP-0416-00062-057','6/6'],
+];
+
+let spools = [];
+
+function loadState() {
+  const raw = localStorage.getItem(DOC_KEY);
+  if (raw) {
+    try { spools = JSON.parse(raw); return; } catch(e) {}
+  }
+  spools = SEED_SPOOLS.map(([id, folha]) => ({
+    id, folha, dn: '', status: 'pendente', inspetor: '', obs: '', updatedAt: ''
+  }));
+  saveState();
+}
+
+function saveState() {
+  localStorage.setItem(DOC_KEY, JSON.stringify(spools));
+}
+
+function togglePanel(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function addSpool() {
+  const id = document.getElementById('add-id').value.trim();
+  if (!id) return;
+  const folha = document.getElementById('add-folha').value.trim();
+  const dn = document.getElementById('add-dn').value.trim();
+  spools.push({ id, folha, dn, status: 'pendente', inspetor: '', obs: '', updatedAt: '' });
+  document.getElementById('add-id').value = '';
+  document.getElementById('add-folha').value = '';
+  document.getElementById('add-dn').value = '';
+  saveState();
+  buildFilters();
+  render();
+}
+
+function importSpools() {
+  const text = document.getElementById('import-text').value;
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line => {
+    const [id, folha, dn] = line.split(';').map(s => (s||'').trim());
+    if (!id) return;
+    if (spools.some(s => s.id === id)) return;
+    spools.push({ id, folha: folha||'', dn: dn||'', status: 'pendente', inspetor: '', obs: '', updatedAt: '' });
+    added++;
+  });
+  document.getElementById('import-text').value = '';
+  saveState();
+  buildFilters();
+  render();
+  alert(`${added} spool(s) importado(s).`);
+}
+
+function removeSpool(id) {
+  if (!confirm(`Remover ${id} da lista?`)) return;
+  spools = spools.filter(s => s.id !== id);
+  saveState();
+  buildFilters();
+  render();
+}
+
+const STATUS_CYCLE = ['pendente','liberado','aprovado','reprovado'];
+const STATUS_LABEL = { pendente:'⏳ Pendente', liberado:'🔄 Liberado', aprovado:'✅ Aprovado', reprovado:'❌ Reprovado' };
+
+function cycleStatus(id) {
+  const s = spools.find(s => s.id === id);
+  if (!s) return;
+  const idx = STATUS_CYCLE.indexOf(s.status);
+  s.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  s.updatedAt = new Date().toISOString().split('T')[0];
+  saveState();
+  render();
+}
+
+function updateField(id, field, value) {
+  const s = spools.find(s => s.id === id);
+  if (!s) return;
+  s[field] = value;
+  if (field !== 'obs') s.updatedAt = new Date().toISOString().split('T')[0];
+  saveState();
+  updateKPIs();
+}
+
+function buildFilters() {
+  const folhas = [...new Set(spools.map(s => s.folha).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-folha');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">📄 Todas as folhas</option>';
+  folhas.forEach(f => sel.innerHTML += `<option value="${f}">Folha ${f}</option>`);
+  sel.value = current;
+}
+
+function updateKPIs() {
+  const total = spools.length;
+  const count = st => spools.filter(s => s.status === st).length;
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-aprovado').textContent = count('aprovado');
+  document.getElementById('kpi-liberado').textContent = count('liberado');
+  document.getElementById('kpi-pendente').textContent = count('pendente');
+  document.getElementById('kpi-reprovado').textContent = count('reprovado');
+  const pct = total ? Math.round(count('aprovado') / total * 100) : 0;
+  document.getElementById('kpi-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function render() {
+  updateKPIs();
+  const search = document.getElementById('search').value.toLowerCase();
+  const fFolha = document.getElementById('filter-folha').value;
+  const fStatus = document.getElementById('filter-status').value;
+
+  const filtered = spools.filter(s => {
+    if (search && !s.id.toLowerCase().includes(search)) return false;
+    if (fFolha && s.folha !== fFolha) return false;
+    if (fStatus && s.status !== fStatus) return false;
+    return true;
+  });
+
+  const grid = document.getElementById('cards-grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state">Nenhum spool encontrado</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(s => `
+    <div class="card st-${s.status}">
+      <div class="card-top">
+        <div>
+          <div class="card-id">${s.id}</div>
+          <div class="card-meta">${s.folha ? 'Folha ' + s.folha : ''}${s.dn ? ' · DN ' + s.dn : ''}</div>
+        </div>
+        <button class="card-del" onclick="removeSpool('${s.id}')" title="Remover">✕</button>
+      </div>
+      <button class="status-pill st-${s.status}" onclick="cycleStatus('${s.id}')">${STATUS_LABEL[s.status]}</button>
+      <div class="card-field">
+        <label>Inspetor</label>
+        <input type="text" value="${s.inspetor}" placeholder="Rubrica / nome" onchange="updateField('${s.id}','inspetor',this.value)">
+      </div>
+      <div class="card-field">
+        <label>Observação</label>
+        <textarea placeholder="Ex: aguardando END, junta 4 reprovada..." onchange="updateField('${s.id}','obs',this.value)">${s.obs}</textarea>
+      </div>
+      ${s.updatedAt ? `<div class="card-meta">Atualizado: ${s.updatedAt}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function exportCSV() {
+  const header = 'ID;Folha;DN;Status;Inspetor;Observacao;Atualizado\n';
+  const rows = spools.map(s => [s.id, s.folha, s.dn, STATUS_LABEL[s.status], s.inspetor, s.obs, s.updatedAt]
+    .map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['﻿' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cartao-campo-0416-00062.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('filter-folha').addEventListener('change', render);
+document.getElementById('filter-status').addEventListener('change', render);
+
+loadState();
+buildFilters();
+render();
+</script>
+</body>
+</html>
