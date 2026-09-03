@@ -174,7 +174,6 @@
 const params = new URLSearchParams(window.location.search);
 const docId = params.get('doc');
 
-seedExampleLine();
 seedSecondLine();
 
 let linha = docId ? getLinha(docId) : null;
