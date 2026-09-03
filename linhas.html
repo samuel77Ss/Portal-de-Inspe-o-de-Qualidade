@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linhas de Tubulação · Controle de Desenhos</title>
+<script src="store.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d1b2a; color: #e0e6f0; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 100%);
+    border-bottom: 2px solid #1e5fa8;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon { width: 44px; height: 44px; background: #1e5fa8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .logo-text h1 { font-size: 18px; font-weight: 700; color: #fff; }
+  .logo-text p { font-size: 12px; color: #7aa3cc; }
+  .nav-link {
+    color: #7aa3cc; font-size: 13px; text-decoration: none;
+    border: 1px solid #1e4a7a; padding: 8px 14px; border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .nav-link:hover { color: #e0e6f0; border-color: #3a8fd4; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 28px; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px; margin-bottom: 22px;
+  }
+  .kpi { background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px; padding: 16px 18px; }
+  .kpi-label { font-size: 11px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; }
+  .kpi-value.blue { color: #4da3e8; }
+  .kpi-value.green { color: #4caf82; }
+  .kpi-value.red { color: #e05a5a; }
+  .kpi-value.gray { color: #7aa3cc; }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  input[type="text"], select, textarea {
+    background: #0f2240; border: 1px solid #1e4a7a; color: #e0e6f0;
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; font-family: inherit;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: #3a8fd4; }
+  #search { min-width: 220px; flex: 1; }
+
+  .btn {
+    background: #1e5fa8; color: #fff; border: none;
+    padding: 9px 16px; border-radius: 8px; font-size: 13px;
+    cursor: pointer; font-weight: 600; transition: background 0.2s;
+  }
+  .btn:hover { background: #2673c2; }
+  .btn.ghost { background: transparent; border: 1px solid #1e4a7a; color: #7aa3cc; }
+  .btn.ghost:hover { border-color: #3a8fd4; color: #e0e6f0; }
+  .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #7aa3cc; cursor: pointer; }
+
+  .panel {
+    background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 20px; display: none;
+  }
+  .panel.open { display: block; }
+  .panel h3 { font-size: 13px; color: #7aa3cc; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .panel-grid input { width: 100%; }
+  .panel small { color: #5a7ca0; display: block; margin-top: 4px; }
+
+  .cwa-group { margin-bottom: 30px; }
+  .cwa-title {
+    font-size: 14px; color: #fff; text-transform: uppercase; letter-spacing: 0.7px;
+    margin-bottom: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px;
+  }
+  .cwa-title .count { font-size: 12px; color: #7aa3cc; font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+  .lines-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .line-card {
+    background: #0f2240; border: 1px solid #1e4a7a; border-radius: 12px;
+    padding: 16px 18px; transition: border-color 0.2s;
+  }
+  .line-card:hover { border-color: #3a8fd4; }
+  .line-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .line-id { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700; color: #fff; word-break: break-all; }
+  .line-del { background: none; border: none; color: #4a5a70; cursor: pointer; font-size: 14px; padding: 0 0 0 8px; flex-shrink: 0; }
+  .line-del:hover { color: #e05a5a; }
+  .line-meta { font-size: 12px; color: #7aa3cc; margin-bottom: 10px; }
+
+  .strip { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 12px; }
+  .strip-block { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+  .line-stats { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat-box { flex: 1; background: #0a1628; border-radius: 8px; padding: 8px; text-align: center; }
+  .stat-box .n { font-size: 17px; font-weight: 700; }
+  .stat-box .l { font-size: 10px; color: #7aa3cc; margin-top: 1px; }
+  .stat-box.green .n { color: #4caf82; }
+  .stat-box.blue .n { color: #4da3e8; }
+  .stat-box.gray .n { color: #7aa3cc; }
+  .stat-box.red .n { color: #e05a5a; }
+
+  .progress-bar { height: 5px; background: #0a1628; border-radius: 3px; overflow: hidden; margin-bottom: 12px; }
+  .progress-bar i { display: block; height: 100%; background: #4caf82; }
+
+  .line-open {
+    display: block; text-align: center; background: #1e5fa8; color: #fff;
+    text-decoration: none; padding: 9px 0; border-radius: 8px; font-size: 13px; font-weight: 600;
+  }
+  .line-open:hover { background: #2673c2; }
+
+  .empty-state { text-align: center; padding: 48px; color: #7aa3cc; }
+  .empty-state p { margin-top: 8px; font-size: 13px; }
+
+  footer { text-align: center; padding: 24px; color: #3a5a7a; font-size: 12px; border-top: 1px solid #1e4a7a; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧭</div>
+    <div class="logo-text">
+      <h1>Linhas de Tubulação</h1>
+      <p>Painel geral · Controle de Desenhos — Milplan Engenharia</p>
+    </div>
+  </div>
+  <a class="nav-link" href="index.html">← Portal de Inspeção</a>
+</header>
+
+<div class="wrap">
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Linhas cadastradas</div><div class="kpi-value blue" id="kpi-linhas">0</div></div>
+    <div class="kpi"><div class="kpi-label">Total de spools</div><div class="kpi-value blue" id="kpi-spools">0</div></div>
+    <div class="kpi"><div class="kpi-label">✅ Aprovados</div><div class="kpi-value green" id="kpi-aprovados">0</div></div>
+    <div class="kpi"><div class="kpi-label">❌ Reprovados</div><div class="kpi-value red" id="kpi-reprovados">0</div></div>
+    <div class="kpi"><div class="kpi-label">Progresso geral</div><div class="kpi-value green" id="kpi-pct">0%</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="🔍 Buscar por documento ou isométrico...">
+    <select id="filter-cwa"><option value="">🏗️ Todas as CWAs</option></select>
+    <label class="checkbox-label"><input type="checkbox" id="filter-pending"> Só com pendência/reprovado</label>
+    <button class="btn" onclick="togglePanel()">➕ Nova linha</button>
+  </div>
+
+  <div class="panel" id="panel-new">
+    <h3>Cadastrar nova linha (a partir de um isométrico recebido)</h3>
+    <div class="panel-grid">
+      <input type="text" id="new-id" placeholder="Nº do documento *">
+      <input type="text" id="new-cwa" placeholder="CWA / área *">
+      <input type="text" id="new-iso" placeholder="Isométrico (ex: 22&quot;-PP-0416-...)">
+      <input type="text" id="new-titulo" placeholder="Título / projeto">
+      <input type="text" id="new-rev" placeholder="Revisão">
+      <input type="text" id="new-folhas" placeholder="Nº de folhas">
+    </div>
+    <button class="btn" onclick="createLine()">Criar e abrir cartão de campo</button>
+    <small>Depois de criar, você importa a lista de spools direto na tela do cartão de campo.</small>
+  </div>
+
+  <div id="groups"></div>
+
+</div>
+
+<footer>Linhas de Tubulação · Portal de Inspeção de Qualidade · Milplan Engenharia · Dados salvos apenas neste navegador</footer>
+
+<script>
+seedExampleLine();
+
+function togglePanel() { document.getElementById('panel-new').classList.toggle('open'); }
+
+function createLine() {
+  const id = document.getElementById('new-id').value.trim();
+  if (!id) { alert('Informe o número do documento.'); return; }
+  if (getLinha(id)) { alert('Já existe uma linha cadastrada com esse número de documento. Abra ela na lista abaixo.'); return; }
+  const cwa = document.getElementById('new-cwa').value.trim() || 'Sem CWA definida';
+  const isometrico = document.getElementById('new-iso').value.trim();
+  const titulo = document.getElementById('new-titulo').value.trim();
+  const revisao = document.getElementById('new-rev').value.trim();
+  const folhas = document.getElementById('new-folhas').value.trim();
+  upsertLinha({ id, cwa, isometrico, titulo, revisao, folhas, holdNota: '', spools: [] });
+  window.location.href = 'cartao-campo.html?doc=' + encodeURIComponent(id);
+}
+
+function removeLine(id) {
+  if (!confirm(`Remover a linha ${id} e todos os dados dela? Essa ação não pode ser desfeita.`)) return;
+  deleteLinha(id);
+  render();
+}
+
+function buildFilters(linhas) {
+  const cwas = [...new Set(linhas.map(l => l.cwa || 'Sem CWA definida'))].sort();
+  const sel = document.getElementById('filter-cwa');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">🏗️ Todas as CWAs</option>';
+  cwas.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+  sel.value = current;
+}
+
+function renderStrip(spools) {
+  return spools.map(s => `<span class="strip-block" style="background:${STATUS_COLOR[s.status]}"></span>`).join('');
+}
+
+function render() {
+  const linhas = loadLinhas();
+  buildFilters(linhas);
+
+  const search = document.getElementById('search').value.toLowerCase();
+  const fCwa = document.getElementById('filter-cwa').value;
+  const onlyPending = document.getElementById('filter-pending').checked;
+
+  let allSpools = 0, allAprovado = 0, allReprovado = 0;
+  linhas.forEach(l => {
+    const st = lineStats(l);
+    allSpools += st.total; allAprovado += st.aprovado; allReprovado += st.reprovado;
+  });
+  document.getElementById('kpi-linhas').textContent = linhas.length;
+  document.getElementById('kpi-spools').textContent = allSpools;
+  document.getElementById('kpi-aprovados').textContent = allAprovado;
+  document.getElementById('kpi-reprovados').textContent = allReprovado;
+  document.getElementById('kpi-pct').textContent = (allSpools ? Math.round(allAprovado / allSpools * 100) : 0) + '%';
+
+  const filtered = linhas.filter(l => {
+    if (search && !(l.id.toLowerCase().includes(search) || (l.isometrico||'').toLowerCase().includes(search))) return false;
+    if (fCwa && (l.cwa || 'Sem CWA definida') !== fCwa) return false;
+    if (onlyPending) {
+      const st = lineStats(l);
+      if (st.pendente === 0 && st.reprovado === 0) return false;
+    }
+    return true;
+  });
+
+  const groupsEl = document.getElementById('groups');
+  if (!filtered.length) {
+    groupsEl.innerHTML = '<div class="empty-state"><p>Nenhuma linha encontrada. Cadastre a primeira em "➕ Nova linha".</p></div>';
+    return;
+  }
+
+  const byCwa = {};
+  filtered.forEach(l => {
+    const cwa = l.cwa || 'Sem CWA definida';
+    (byCwa[cwa] = byCwa[cwa] || []).push(l);
+  });
+
+  groupsEl.innerHTML = Object.keys(byCwa).sort().map(cwa => {
+    const lines = byCwa[cwa];
+    return `
+      <div class="cwa-group">
+        <div class="cwa-title">🏗️ ${cwa} <span class="count">(${lines.length} linha${lines.length>1?'s':''})</span></div>
+        <div class="lines-grid">
+          ${lines.map(l => {
+            const st = lineStats(l);
+            return `
+              <div class="line-card">
+                <div class="line-top">
+                  <div class="line-id">${l.id}</div>
+                  <button class="line-del" onclick="removeLine('${l.id}')" title="Remover">✕</button>
+                </div>
+                <div class="line-meta">${l.isometrico || '—'}${l.titulo ? ' · ' + l.titulo : ''}${l.revisao ? ' · Rev.' + l.revisao : ''}</div>
+                <div class="strip">${st.total ? renderStrip(l.spools) : '<span style="font-size:11px;color:#5a7ca0">Nenhum spool importado ainda</span>'}</div>
+                <div class="progress-bar"><i style="width:${st.pct}%"></i></div>
+                <div class="line-stats">
+                  <div class="stat-box green"><div class="n">${st.aprovado}</div><div class="l">Aprov.</div></div>
+                  <div class="stat-box blue"><div class="n">${st.liberado}</div><div class="l">Liber.</div></div>
+                  <div class="stat-box gray"><div class="n">${st.pendente}</div><div class="l">Pend.</div></div>
+                  <div class="stat-box red"><div class="n">${st.reprovado}</div><div class="l">Reprov.</div></div>
+                </div>
+                <a class="line-open" href="cartao-campo.html?doc=${encodeURIComponent(l.id)}">Abrir cartão de campo →</a>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('filter-cwa').addEventListener('change', render);
+document.getElementById('filter-pending').addEventListener('change', render);
+
+render();
+</script>
+</body>
+</html>
