@@ -175,6 +175,7 @@ const params = new URLSearchParams(window.location.search);
 const docId = params.get('doc');
 
 seedExampleLine();
+seedSecondLine();
 
 let linha = docId ? getLinha(docId) : null;
 
@@ -214,6 +215,22 @@ document.getElementById('app').innerHTML = `
     <div><span class="l">Título / Projeto</span><span class="v">${linha.titulo || '—'}</span></div>
     <div><span class="l">CWA</span><span class="v">${linha.cwa || '—'}</span></div>
     <div><span class="l">Folhas</span><span class="v">${linha.folhas || '—'}</span></div>
+    <div><button class="btn ghost" onclick="togglePanel('panel-edit')">✏️ Editar dados da linha</button></div>
+  </div>
+
+  <div class="panel" id="panel-edit">
+    <h3>Editar dados da linha</h3>
+    <div class="panel-row">
+      <input type="text" id="edit-cwa" placeholder="CWA / área" value="${escAttr(linha.cwa)}">
+      <input type="text" id="edit-iso" placeholder="Isométrico" value="${escAttr(linha.isometrico)}">
+      <input type="text" id="edit-titulo" placeholder="Título / Projeto" value="${escAttr(linha.titulo)}" style="min-width:220px">
+      <input type="text" id="edit-rev" placeholder="Revisão" value="${escAttr(linha.revisao)}" style="max-width:100px">
+      <input type="text" id="edit-folhas" placeholder="Folhas" value="${escAttr(linha.folhas)}" style="max-width:100px">
+    </div>
+    <div class="panel-row" style="width:100%">
+      <textarea id="edit-hold" placeholder="Nota de HOLD (deixe em branco se não houver)" style="width:100%">${(linha.holdNota||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+    <button class="btn" onclick="saveLineMeta()">Salvar</button>
   </div>
 
   ${linha.holdNota ? `<div class="hold-banner"><span>⚠️</span><div><b>Atenção:</b> ${linha.holdNota}</div></div>` : ''}
@@ -300,6 +317,17 @@ render();
 }
 
 function persist() { upsertLinha(linha); }
+
+function saveLineMeta() {
+  linha.cwa = document.getElementById('edit-cwa').value.trim();
+  linha.isometrico = document.getElementById('edit-iso').value.trim();
+  linha.titulo = document.getElementById('edit-titulo').value.trim();
+  linha.revisao = document.getElementById('edit-rev').value.trim();
+  linha.folhas = document.getElementById('edit-folhas').value.trim();
+  linha.holdNota = document.getElementById('edit-hold').value.trim();
+  persist();
+  renderApp();
+}
 
 function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
 
@@ -414,7 +442,7 @@ function render() {
       <button class="status-pill st-${s.status}" onclick="cycleStatus('${s.id}')">${STATUS_LABEL[s.status]}</button>
       <div class="card-field">
         <label>Inspetor</label>
-        <input type="text" value="${s.inspetor}" placeholder="Rubrica / nome" onchange="updateField('${s.id}','inspetor',this.value)">
+        <input type="text" value="${escAttr(s.inspetor)}" placeholder="Rubrica / nome" onchange="updateField('${s.id}','inspetor',this.value)">
       </div>
       <div class="card-field">
         <label>Observação</label>
