@@ -1,0 +1,217 @@
+/* Recebimento AMR — dados compartilhados entre o app de campo e o painel do escritório.
+   Etapa 1: armazenamento local (modo exemplo). Na etapa 2 o mesmo "AMR.store" passa a usar o Firebase. */
+(function () {
+  const CONTRATO = "4600042164";
+  const OBRA = "Serviços de Obras Civis e Montagem Eletromecânica Relacionados à Retomada da Implantação do Projeto Flotação Recleaner";
+  const ESCOPO = "Obras Civis e Montagem Eletromecânica relacionados à retomada da implantação do Projeto Flotação Recleaner - Alvorada de Minas/MG";
+  const DOC_FICHA = "447.OPE.FP-01 Rev.02";
+  const DOC_MAPA = "447.QUA.FP-11";
+  const FICHA_INICIAL = 2291;
+
+  const TIPOS = {
+    NF: { rotulo: "Nota fiscal", curto: "NF", fornecimento: "MILPLAN ENGENHARIA" },
+    ROM: { rotulo: "Romaneio Anglo", curto: "Romaneio", fornecimento: "ANGLO AMERICAN" }
+  };
+  const STATUS = {
+    sem_acao: { rotulo: "Sem ação", dica: "NF na obra, recebimento ainda não feito" },
+    em_andamento: { rotulo: "Em andamento", dica: "Com a qualidade, relatório em elaboração" },
+    cert_pendente: { rotulo: "Certificado pendente", dica: "Aguardando certificado" },
+    finalizado: { rotulo: "Finalizado", dica: "Enviado para a fiscalização" }
+  };
+  const ORDEM_STATUS = ["sem_acao", "em_andamento", "cert_pendente", "finalizado"];
+  const CONF = { C: "Conforme", NC: "Não conforme", NA: "Não se aplica" };
+  const UNIDADES = ["PÇ", "UND", "M", "KG", "GL", "LT", "CJ", "M²", "M³", "VB", "TB", "SC", "RL", "BR"];
+  const MOTIVOS = {
+    foto: "Foto ilegível ou incompleta",
+    doc_divergente: "Dados do documento divergentes (nº, fornecedor, data)",
+    qtd: "Quantidade divergente",
+    tag: "TAG / código incorreto",
+    item_falta: "Item faltando ou a mais",
+    cert: "Certificado faltando, ilegível ou não confere",
+    avaria: "Avaria / não conformidade sem registro",
+    outro: "Outro"
+  };
+  const CONFER = { pendente: "A conferir", aprovada: "Conferida", devolvida: "Devolvida ao campo" };
+  const OBS_ANGLO = "Obs1 - Material fornecido pela Anglo, recebido sem Certificado de Qualidade. A ausência do documento fica registrada neste Relatório de Recebimento, conforme orientação estabelecida no e-mail “RE: Pendência de Certificados de Qualidade - Materiais Fornecidos pelo Cliente”, de 01/09/2026.";
+
+  const norm = s => String(s ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+  const soDig = s => String(s ?? "").replace(/\D/g, "").replace(/^0+/, "");
+  const normForn = s => {
+    const n = norm(s);
+    if (/^M[I]?[L]?P+[L]?AN/.test(n) || n === "MIPLAN ENGENHARIA") return "MILPLAN ENGENHARIA";
+    if (n.includes("ANGLO")) return "ANGLO AMERICAN";
+    return n;
+  };
+  const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const fmtData = s => s ? s.slice(0, 10).split("-").reverse().join("/") : "—";
+  const fmtQtd = n => (n === "" || n == null) ? "" : Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+
+  /* Chave de duplicidade: NF = nº + fornecedor; Romaneio = nº do romaneio */
+  function chaveDoc(f) {
+    if (f.tipo === "ROM") return f.romaneio ? "ROM|" + norm(f.romaneio) : "";
+    return f.nf ? "NF|" + soDig(f.nf) + "|" + normForn(f.fornecedor) : "";
+  }
+  function duplicada(f, todas) {
+    const k = chaveDoc(f);
+    if (!k) return null;
+    return todas.find(o => o.id !== f.id && chaveDoc(o) === k) || null;
+  }
+  function msgDuplicada(f, outra) {
+    const doc = f.tipo === "ROM" ? "Romaneio já realizado recebimento" : "NF já realizada recebimento";
+    return `${doc} (ficha ${outra.numero}, ${fmtData(outra.dataRecebimento)}).`;
+  }
+  function proximoNumero(todas, inicial) {
+    const max = todas.filter(f => !f.exemplo).reduce((m, f) => Math.max(m, +f.numero || 0), 0);
+    return Math.max(max + 1, inicial || FICHA_INICIAL);
+  }
+  /* Itens válidos para a ficha: romaneio com quantidade 0 não entra */
+  function itensValidos(f) {
+    return (f.itens || []).filter(i => (i.descricao || i.tag) && !(f.tipo === "ROM" && Number(i.qtd) === 0));
+  }
+  function pendencias(f) {
+    const p = [];
+    if (!itensValidos(f).length) p.push("sem itens");
+    if (f.tipo === "NF" && itensValidos(f).some(i => !i.certificado)) p.push("certificado");
+    if (itensValidos(f).some(i => i.conf === "NC")) p.push("não conformidade");
+    return p;
+  }
+
+  /* Linhas do mapa (FP-11): uma por item */
+  const COLS_MAPA = ["STATUS", "FICHA N°", "ITEM", "DESCRIÇÃO", "TAG", "NOTA FISCAL", "ROMANEIO", "CERTIFICADO", "UND", "QUANT RECEBIDA", "DATA RECEBIMENTO", "FORNECIMENTO", "FORNECEDOR", "LOCALIZAÇÃO/ARMAZENAMENTO", "STATUS ITEM"];
+  function linhasMapa(fichas) {
+    const out = [];
+    fichas.slice().sort((a, b) => a.numero - b.numero).forEach(f => {
+      const its = itensValidos(f);
+      const base = [STATUS[f.status]?.rotulo || "", String(f.numero)];
+      if (!its.length) { out.push([...base, "", "", "", f.tipo === "ROM" ? "N/A" : f.nf, f.romaneio, "", "", "", fmtData(f.dataRecebimento), f.fornecimento, f.fornecedor, "", ""]); return; }
+      its.forEach((i, n) => out.push([...base, n + 1, i.descricao, i.tag, f.tipo === "ROM" ? "N/A" : f.nf, f.romaneio, i.certificado || (f.tipo === "ROM" ? "OBS 1" : ""), i.und, fmtQtd(i.qtd), fmtData(f.dataRecebimento), f.fornecimento, f.fornecedor, i.local, i.conf || ""]));
+    });
+    return out.map(limpa);
+  }
+  function limpa(r) { return r.map(v => v == null ? "" : v); }
+  function csvMapa(fichas) {
+    const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    return "﻿" + [COLS_MAPA, ...linhasMapa(fichas)].map(r => r.map(q).join(";")).join("\r\n");
+  }
+
+  /* ---------- Exemplos (dos documentos reais enviados: ficha 1609 e romaneio 1039-FLT-2026) ---------- */
+  function exemplos() {
+    const t = new Date().toISOString();
+    const D = window.AMR_EXEMPLO_DOCS || {};
+    const anexo = (k, nome) => D[k] ? [{ nome, img: D[k] }] : [];
+    const nfItens = [
+      ["TINTA PU - WEGPOXI CVD323 CINZA N6,5 - 12LT 3,6L - COM FDS E CERTIFICADO DE QUALIDADE", "MT08010024", "GL", 12, "3023651"],
+      ["CATALISADOR TINTA - WEGPOXI CVD32 COMP. B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "GL", 12, "3023651"],
+      ["TINTA PU - WEGTHANE HPA 501 RT CINZA N5 - 24 LT 3,6L - COM FDS E CERTIFICADO DE QUALIDADE", "MT08010024", "GL", 24, "3023652"],
+      ["CATALISADOR TINTA - W THANE 5058 COMP B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "LT", 24, "3023652"],
+      ["TINTA PU - LACK THANE N 2677R AZUL 2,5 PB 5/8 - 8LT 3,6L COM FDS E CERTIFICADO DE QUALIDADE", "MT08010024", "GL", 8, "3023648"],
+      ["CATALISADOR TINTA - W THANE 5013 COMP B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "LT", 8, ""]
+    ].map(([descricao, tag, und, qtd, certificado]) => ({ descricao, tag, und, qtd, certificado, local: "ALMOXARIFADO", conf: "C" }));
+    const romItens = [
+      ["CHAPA DE PISO - C-1501-C-54-A-1597", "5858-0415-1458 B1", 1],
+      ["VIGA - C-1751-C-255-A-203", "5858-0415-1439 A1", 7],
+      ["CONTR. HORIZONTAL - C-1860 L-64 A-64", "5858-0415-1447 M1", 1],
+      ["VIGA - C-4741-102-A-203", "5858-0415-1440 B1", 5],
+      ["CONTR. HORIZONTAL - C-1841 L-64 A-64", "5858-0415-1447 L1", 1],
+      ["CONTR. HORIZONTAL - C-1721 L-64 A-64", "5858-0415-1447 K1", 0],
+      ["VIGA - C-4741-175 A-203", "5858-0415-1439 H1", 1]
+    ].map(([descricao, tag, qtd]) => ({ descricao, tag, und: "PÇ", qtd, certificado: "", local: "PLATÔ-13", conf: "C" }));
+    return [
+      { id: "ex-1609", exemplo: true, numero: 1609, tipo: "NF", nf: "10990", romaneio: "4166-REV-00", pedido: "004166", fornecedor: "WEG TINTAS", fornecimento: "MILPLAN ENGENHARIA", dataRecebimento: "2026-08-15", status: "finalizado", itens: nfItens, observacao: "", assinaturas: { producao: { em: "2026-08-19" }, qualidade: { em: "2026-08-19" }, fiscalizacao: { em: "2026-10-14" } }, anexos: { doc: anexo("nf", "DANFE NF 10990"), cert: anexo("cert", "Certificado 3023651") }, conferencia: { situacao: "aprovada", historico: [{ acao: "enviada", em: "2026-08-15T12:00:00Z", por: "Campo" }, { acao: "aprovada", em: "2026-08-16T12:00:00Z", por: "Qualidade" }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t },
+      { id: "ex-2290", exemplo: true, numero: 2290, tipo: "ROM", nf: "", romaneio: "1039-FLT-2026", pedido: "", fornecedor: "ANGLO AMERICAN", fornecimento: "ANGLO AMERICAN", dataRecebimento: hoje(), status: "em_andamento", itens: romItens, observacao: OBS_ANGLO, assinaturas: {}, anexos: { doc: anexo("rom", "Romaneio 1039-FLT-2026"), cert: [] }, conferencia: { situacao: "devolvida", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar.", historico: [{ acao: "enviada", em: t, por: "Campo" }, { acao: "devolvida", em: t, por: "Qualidade", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar." }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t }
+    ];
+  }
+
+  /* ---------- Armazenamento local (etapa 1) ---------- */
+  const KEY = "amr_recebimento_fichas_v2";
+  const ouvintes = new Set();
+  let cache = null;
+  function ler() {
+    if (cache) return cache;
+    try { const s = localStorage.getItem(KEY); cache = s ? JSON.parse(s) : null; } catch (e) { cache = null; }
+    if (!cache) { cache = exemplos(); gravar(); }
+    return cache;
+  }
+  function gravar() { try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch (e) { } }
+  function avisar() { const l = ler().slice(); ouvintes.forEach(fn => { try { fn(l); } catch (e) { } }); }
+  window.addEventListener("storage", e => { if (e.key === KEY) { cache = null; avisar(); } });
+
+  const store = {
+    modo: "exemplo",
+    ouvir(fn) { ouvintes.add(fn); fn(ler().slice()); return () => ouvintes.delete(fn); },
+    async salvar(f) {
+      const todas = ler();
+      const dup = duplicada(f, todas);
+      if (dup) { const e = new Error(msgDuplicada(f, dup)); e.code = "duplicada"; e.outra = dup; throw e; }
+      const agora = new Date().toISOString();
+      const i = todas.findIndex(o => o.id === f.id);
+      if (i >= 0) todas[i] = { ...todas[i], ...f, atualizadoEm: agora };
+      else { f.id = f.id || "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); f.numero = f.numero || proximoNumero(todas, cadastros.fichaInicial()); f.criadoEm = agora; f.atualizadoEm = agora; todas.push(f); }
+      gravar(); avisar(); return f;
+    },
+    async excluir(id) { cache = ler().filter(f => f.id !== id); gravar(); avisar(); },
+    async restaurarExemplos() { cache = exemplos(); gravar(); avisar(); }
+  };
+
+  /* ---------- Conferência ---------- */
+  function conf(f) { return f.conferencia || { situacao: "pendente", historico: [] }; }
+  function marcarConferencia(f, acao, dados) {
+    const c = conf(f), ev = { acao, em: new Date().toISOString(), por: dados?.por || "", ...(dados || {}) };
+    const nova = { ...c, historico: [...(c.historico || []), ev] };
+    if (acao === "aprovada") Object.assign(nova, { situacao: "aprovada", motivos: [], itens: [], comentario: "" });
+    if (acao === "devolvida") Object.assign(nova, { situacao: "devolvida", motivos: dados.motivos || [], itens: dados.itens || [], comentario: dados.comentario || "" });
+    if (acao === "enviada" || acao === "reenviada") Object.assign(nova, { situacao: "pendente" });
+    return { ...f, conferencia: nova };
+  }
+
+  /* ---------- Cadastros: fornecedores e grupos de e-mail ---------- */
+  const KEY_CAD = "amr_recebimento_cadastros_v1";
+  const GRUPOS = { suprimentos: "Suprimentos", logistica: "Logística", qualidade: "Qualidade" };
+  const ouvCad = new Set();
+  let cad = null;
+  function lerCad() {
+    if (cad) return cad;
+    try { const s = localStorage.getItem(KEY_CAD); cad = s ? JSON.parse(s) : null; } catch (e) { cad = null; }
+    if (!cad) {
+      cad = { fornecedores: [{ id: "weg", nome: "WEG TINTAS", cnpj: "60.621.141/0007-49", emails: [], exemplo: true }],
+              grupos: { suprimentos: [], logistica: [], qualidade: [] }, fichaInicial: FICHA_INICIAL };
+      gravarCad();
+    }
+    return cad;
+  }
+  function gravarCad() { try { localStorage.setItem(KEY_CAD, JSON.stringify(cad)); } catch (e) { } }
+  function avisarCad() { const c = JSON.parse(JSON.stringify(lerCad())); ouvCad.forEach(fn => { try { fn(c); } catch (e) { } }); }
+  window.addEventListener("storage", e => { if (e.key === KEY_CAD) { cad = null; avisarCad(); } });
+  const emailOk = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
+  const cadastros = {
+    ouvir(fn) { ouvCad.add(fn); fn(JSON.parse(JSON.stringify(lerCad()))); return () => ouvCad.delete(fn); },
+    async salvarFornecedor(f) {
+      const c = lerCad(); f.nome = norm(f.nome);
+      if (!f.nome) throw new Error("Informe o nome do fornecedor.");
+      if (c.fornecedores.some(o => o.id !== f.id && normForn(o.nome) === normForn(f.nome))) throw new Error("Esse fornecedor já está cadastrado.");
+      f.emails = (f.emails || []).map(s => s.trim().toLowerCase()).filter(Boolean);
+      const bad = f.emails.find(s => !emailOk(s)); if (bad) throw new Error("E-mail inválido: " + bad);
+      const i = c.fornecedores.findIndex(o => o.id === f.id);
+      if (i >= 0) c.fornecedores[i] = { ...c.fornecedores[i], ...f, exemplo: false }; else { f.id = "fo" + Date.now().toString(36); c.fornecedores.push(f); }
+      gravarCad(); avisarCad();
+    },
+    async excluirFornecedor(id) { const c = lerCad(); c.fornecedores = c.fornecedores.filter(f => f.id !== id); gravarCad(); avisarCad(); },
+    async salvarGrupo(k, emails) {
+      const c = lerCad(); const l = emails.map(s => s.trim().toLowerCase()).filter(Boolean);
+      const bad = l.find(s => !emailOk(s)); if (bad) throw new Error("E-mail inválido: " + bad);
+      c.grupos[k] = [...new Set(l)]; gravarCad(); avisarCad();
+    },
+    async salvarFichaInicial(n) { const c = lerCad(); c.fichaInicial = Math.max(1, parseInt(n, 10) || FICHA_INICIAL); gravarCad(); avisarCad(); },
+    fichaInicial() { return lerCad().fichaInicial || FICHA_INICIAL; },
+    fornecedorPorNome(nome) { const n = normForn(nome); return lerCad().fornecedores.find(f => normForn(f.nome) === n) || null; }
+  };
+  /* Destinatários do aviso de certificado pendente (envio real na etapa 5) */
+  function destinatariosCertPendente(f) {
+    if (f.tipo !== "NF") return [];
+    const c = lerCad(), fo = cadastros.fornecedorPorNome(f.fornecedor);
+    return [...new Set([...(fo?.emails || []), ...c.grupos.suprimentos, ...c.grupos.logistica, ...c.grupos.qualidade])];
+  }
+
+  window.AMR = { MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+    norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
+})();

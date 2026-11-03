@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f2d35">
+<title>Recebimento AMR Escritório</title>
+<link rel="icon" href="campo/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<style>
+/* Painel do escritório: abas no cabeçalho; indicadores por status; fichas em cartões; mapa FP-11 em tabela rolável; cadastros em colunas */
+html{padding-top:env(safe-area-inset-top,0px)}
+main{padding-block:18px 60px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis .k:first-child{grid-column:1/-1}}
+.k{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:grid;gap:2px;border-top:4px solid var(--line)}
+.k b{font-family:var(--f-display);font-size:2.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.k span{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.k em{font-style:normal;font-size:.76rem;color:var(--muted)}
+.k.sem_acao{border-top-color:var(--idle)} .k.em_andamento{border-top-color:var(--wait)} .k.cert_pendente{border-top-color:var(--warn)} .k.finalizado{border-top-color:var(--ok)}
+.k.sem_acao b{color:var(--idle)} .k.em_andamento b{color:var(--wait)} .k.cert_pendente b{color:var(--warn)} .k.finalizado b{color:var(--ok)}
+.flow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:10px}
+.flow i{font-style:normal;opacity:.5}
+.cols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+.col h3{margin:0 0 8px;font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:flex;gap:6px;align-items:center}
+.list{display:grid;gap:8px}
+.card{display:grid;gap:5px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--wait);border-radius:6px;padding:11px 13px;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer}
+.card.sem_acao{border-left-color:var(--idle)} .card.cert_pendente{border-left-color:var(--warn)} .card.finalizado{border-left-color:var(--ok)}
+.card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card .num{font-family:var(--f-display);font-weight:700;font-size:1.25rem}
+.card .meta{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.filters input{flex:1 1 240px;min-width:0}
+.filters select{width:auto;flex:0 1 auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 11px;font:500 .8rem var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:8px}
+/* mapa */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table.mapa{border-collapse:collapse;font-size:.78rem;min-width:1300px;width:100%}
+table.mapa th{position:sticky;top:0;background:var(--head);color:var(--head-ink);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:.68rem;padding:8px 8px;text-align:left;white-space:nowrap}
+table.mapa td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+table.mapa td.d{min-width:260px}
+table.mapa tr:hover td{background:var(--surface-2)}
+.mapa-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.mapa-head .grow{font-size:.85rem;color:var(--muted)}
+/* folha de detalhe */
+.sheet-bg{position:fixed;inset:0;background:rgba(10,16,20,.55);z-index:30;display:flex;justify-content:center;align-items:flex-end}
+.sheet{background:var(--bg);width:100%;max-width:980px;max-height:94%;overflow:auto;border-radius:12px 12px 0 0;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+@media (min-width:760px){.sheet-bg{align-items:center}.sheet{border-radius:12px;max-height:92%}}
+.sheet-head{position:sticky;top:0;z-index:2;background:var(--head);color:var(--head-ink);display:flex;align-items:center;gap:10px;padding:12px 16px}
+.sheet-head h3{margin:0;font-family:var(--f-display);font-size:1.35rem;text-transform:uppercase;letter-spacing:.03em}
+.sheet-body{padding:14px 16px;display:grid;gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:12px}
+.box h4{margin:0;font-family:var(--f-display);font-size:1.05rem;text-transform:uppercase;letter-spacing:.05em}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.it-wrap{overflow-x:auto}
+table.its{border-collapse:collapse;width:100%;min-width:880px;font-size:.82rem}
+table.its th{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:4px 4px;font-weight:600}
+table.its td{padding:3px 3px;vertical-align:top}
+table.its input,table.its select{min-height:36px;padding:6px 7px;font-size:.82rem}
+table.its tr.zero td{opacity:.5}
+table.its .del{background:none;border:0;color:var(--bad);cursor:pointer;font-size:1rem;padding:6px}
+.sign{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:600px){.sign{grid-template-columns:1fr}}
+.sign label{display:flex;gap:8px;align-items:center;font-weight:600;font-size:.85rem}
+.sign input[type=checkbox]{width:20px;height:20px;min-height:0}
+.soon{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.soon .btn[disabled]::after{content:"em breve";font:600 .62rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;background:var(--surface-2);color:var(--muted);padding:2px 5px;border-radius:3px;margin-left:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.actions .sp{flex:1}
+/* conferência */
+.sheet{max-width:1240px}
+.sheet-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;padding:14px 16px;align-items:start}
+@media (max-width:980px){.sheet-grid{grid-template-columns:1fr}}
+.viewer{position:sticky;top:64px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:10px}
+@media (max-width:980px){.viewer{position:static}}
+.viewer .stage{background:var(--surface-2);border-radius:6px;min-height:220px;display:grid;place-items:center;overflow:hidden;cursor:zoom-in}
+.viewer .stage img{width:100%;height:auto;display:block}
+.viewer .none{color:var(--muted);font-size:.85rem;padding:30px 16px;text-align:center}
+.vtabs{display:flex;gap:6px;flex-wrap:wrap}
+.vthumbs{display:flex;gap:6px;overflow-x:auto}
+.vthumbs button{border:2px solid transparent;border-radius:5px;padding:0;background:none;cursor:pointer;flex:0 0 auto}
+.vthumbs button[aria-pressed="true"]{border-color:var(--accent)}
+.vthumbs img{width:58px;height:58px;object-fit:cover;border-radius:3px;display:block}
+.confbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.confbar .grow{min-width:0}
+.devolve{display:grid;gap:10px;border:1px solid var(--bad);border-radius:8px;padding:12px;background:var(--bad-bg)}
+.devolve h5{margin:0;font:600 .85rem var(--f-body);color:var(--bad);text-transform:uppercase;letter-spacing:.05em}
+.devolve label.ck{display:flex;gap:8px;align-items:flex-start;font-size:.88rem;color:var(--ink)}
+.devolve input[type=checkbox]{width:18px;height:18px;min-height:0;margin-top:2px;flex:0 0 auto}
+.itchips{display:flex;gap:6px;flex-wrap:wrap}
+.itchips button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font:600 .8rem var(--f-mono);cursor:pointer}
+.itchips button[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.hist{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.82rem}
+.hist li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
+.hist .when{color:var(--muted);font-family:var(--f-mono);font-size:.74rem}
+table.its tr.flag td:first-child{box-shadow:inset 4px 0 0 var(--bad);color:var(--bad);font-weight:700}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(5,8,10,.92);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:calc(50px + env(safe-area-inset-top,0px)) 12px 20px}
+.lightbox img{max-width:100%;height:auto;cursor:zoom-in;background:#fff}
+.lightbox.zoom img{max-width:none;width:220%;cursor:zoom-out}
+.lightbox .close{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2}
+/* cadastros */
+.cad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:start}
+@media (max-width:860px){.cad{grid-template-columns:1fr}}
+.grp{display:grid;gap:10px}
+.forn{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.forn:first-child{border-top:0;padding-top:0}
+.forn .top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.forn b{font-weight:600}
+.forn .em{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="hbar">
+      <div class="grow"><h1>Recebimento de Materiais</h1><small>AMR · FLOTAÇÃO RECLEANER · ESCRITÓRIO</small></div>
+      <span class="badge-demo" id="badgeDemo">Modo exemplo</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-v="painel" aria-selected="true">Painel</button>
+      <button class="tab" role="tab" data-v="fichas" aria-selected="false">Fichas</button>
+      <button class="tab" role="tab" data-v="mapa" aria-selected="false">Mapa FP-11</button>
+      <button class="tab" role="tab" data-v="cadastros" aria-selected="false">Cadastros</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="v-painel">
+    <div class="kpis" id="kpis"></div>
+    <div class="flow"><span>Fluxo:</span><span class="pill sem_acao">Sem ação</span><i>→</i><span class="pill em_andamento">Em andamento</span><i>→</i><span class="pill cert_pendente">Certificado pendente</span><i>→</i><span class="pill finalizado">Finalizado</span></div>
+    <h2 class="sec">O que precisa de atenção</h2>
+    <div class="cols" id="cols"></div>
+  </section>
+
+  <section id="v-fichas" hidden>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Buscar ficha, NF, romaneio, fornecedor, TAG, descrição…" aria-label="Buscar">
+      <select id="fTipo" aria-label="Tipo"><option value="">NF e romaneio</option><option value="NF">Só nota fiscal</option><option value="ROM">Só romaneio Anglo</option></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="grid-cards" id="lista"></div>
+  </section>
+
+  <section id="v-mapa" hidden>
+    <div class="mapa-head">
+      <div class="grow" id="mapaInfo"></div>
+      <input id="qMapa" type="search" placeholder="Filtrar o mapa…" style="width:auto;flex:1 1 200px" aria-label="Filtrar o mapa">
+      <button class="btn primary" type="button" id="btnExport">Exportar mapa (Excel)</button>
+    </div>
+    <div class="tbl-wrap"><table class="mapa" id="tMapa"></table></div>
+  </section>
+
+  <section id="v-cadastros" hidden>
+    <div class="cad">
+      <div class="grp">
+        <div class="box">
+          <h4>Numeração das fichas</h4>
+          <p class="hint">Sequência única para NF e romaneio Anglo. O app usa o maior entre este número e a última ficha lançada + 1.</p>
+          <div style="display:flex;gap:8px"><input id="fichaIni" type="number" min="1" inputmode="numeric" style="max-width:160px"><button class="btn" type="button" id="btnFichaIni">Salvar</button></div>
+          <span class="code" id="proxFicha"></span>
+        </div>
+        <div class="box">
+          <h4>Aviso de certificado pendente</h4>
+          <p class="hint">Quem recebe o e-mail quando uma NF chega sem certificado, além do fornecedor. Um e-mail por linha. O envio é ligado na etapa 5.</p>
+          <div id="grupos" class="grp"></div>
+        </div>
+      </div>
+      <div class="box">
+        <div style="display:flex;align-items:center;gap:8px"><h4 class="grow">Fornecedores</h4><button class="btn primary small" type="button" id="btnNovoForn">+ Fornecedor</button></div>
+        <div id="fornForm" class="box" hidden style="background:var(--bg)">
+          <div class="g4">
+            <div class="f" style="grid-column:span 2"><label for="foNome">Nome</label><input id="foNome" autocomplete="off"></div>
+            <div class="f" style="grid-column:span 2"><label for="foCnpj">CNPJ</label><input id="foCnpj" inputmode="numeric" autocomplete="off"></div>
+            <div class="f" style="grid-column:1/-1"><label for="foEmails">E-mails para aviso (um por linha)</label><textarea id="foEmails" rows="3"></textarea></div>
+          </div>
+          <div class="actions"><button class="btn danger small" type="button" id="btnExcForn" hidden>Excluir</button><span class="sp"></span><button class="btn ghost small" type="button" id="btnCancForn">Cancelar</button><button class="btn primary small" type="button" id="btnSalvForn">Salvar fornecedor</button></div>
+        </div>
+        <input id="qForn" type="search" placeholder="Buscar fornecedor…" aria-label="Buscar fornecedor">
+        <div id="fornList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet rise" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="sheet-head"><h3 id="shTitle">Ficha</h3><span class="grow"></span><button class="btn onhead small" type="button" id="btnFechar">Fechar</button></div>
+    <div class="sheet-grid">
+     <aside class="viewer" aria-label="Documentos recebidos">
+      <div class="vtabs" id="vTabs"></div>
+      <div class="stage" id="vStage" title="Toque para ampliar"></div>
+      <div class="vthumbs" id="vThumbs"></div>
+      <p class="hint">Confira o documento com os dados ao lado. Toque na imagem para ampliar.</p>
+     </aside>
+     <div class="sheet-body" style="padding:0">
+      <div class="box">
+        <div class="confbar"><span class="pill" id="dConf"></span><span class="grow"></span><button class="btn small" type="button" id="btnDevolver" style="color:var(--bad);border-color:var(--bad)">Devolver ao campo</button><button class="btn small" type="button" id="btnAprovar" style="color:var(--ok);border-color:var(--ok)">Aprovar conferência</button></div>
+        <div class="devolve" id="devPanel" hidden>
+          <h5>Devolver como inconforme</h5>
+          <div id="devMotivos" style="display:grid;gap:6px"></div>
+          <div class="f"><span class="lbl">Itens com problema (opcional)</span><div class="itchips" id="devItens"></div></div>
+          <div class="f"><label for="devCom">Comentário para o campo</label><textarea id="devCom" rows="2" placeholder="Ex.: refazer a foto da NF, o nº do lote não está legível"></textarea></div>
+          <div class="actions"><button class="btn ghost small" type="button" id="devCancel">Cancelar</button><button class="btn small" type="button" id="devOk" style="background:var(--bad);border-color:var(--bad);color:#fff">Confirmar devolução</button></div>
+        </div>
+        <div class="notice bad" id="dDevolInfo" hidden></div>
+      </div>
+      <div class="box">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill" id="dTipo"></span><span class="code" id="dOrigem"></span></div>
+        <div class="f"><span class="lbl">Status</span><div class="seg" id="dStatus"></div></div>
+        <div class="g4">
+          <div class="f" data-t="NF"><label for="dNf">Nota fiscal</label><input id="dNf"></div>
+          <div class="f" data-t="NF"><label for="dForn">Fornecedor</label><input id="dForn" list="dlForn"></div>
+          <div class="f"><label for="dRom" id="lRom">Romaneio</label><input id="dRom"></div>
+          <div class="f"><label for="dData">Data de recebimento</label><input id="dData" type="date"></div>
+        </div>
+        <datalist id="dlForn"></datalist>
+        <div class="notice bad" id="dDup" hidden></div>
+        <div class="notice" id="dCert" hidden></div>
+      </div>
+      <div class="box">
+        <div style="display:flex;align-items:center;gap:8px"><h4 class="grow">Itens <span class="code" id="dCount"></span></h4><button class="btn small" type="button" id="btnAddIt">+ Item</button></div>
+        <div class="it-wrap"><table class="its"><thead><tr><th>#</th><th style="width:34%">Descrição</th><th>TAG</th><th>Certificado</th><th>Und</th><th>Qtd</th><th>Local</th><th>Status</th><th></th></tr></thead><tbody id="dItens"></tbody></table></div>
+        <p class="hint" id="dZero" hidden>Itens com quantidade 0 no romaneio aparecem apagados e não entram na ficha nem no mapa.</p>
+      </div>
+      <div class="box">
+        <h4>Observação</h4>
+        <textarea id="dObs" rows="3"></textarea>
+      </div>
+      <div class="box">
+        <h4>Assinaturas</h4>
+        <div class="sign" id="dSign"></div>
+      </div>
+      <div class="box">
+        <h4>Histórico</h4>
+        <ul class="hist" id="dHist"></ul>
+      </div>
+      <div class="soon">
+        <button class="btn" type="button" disabled>Ficha FP-01 (PDF)</button>
+        <button class="btn" type="button" disabled>Baixar pacote</button>
+        
+      </div>
+      <div class="actions">
+        <button class="btn danger" type="button" id="btnExcluir">Excluir ficha</button>
+        <span class="sp"></span>
+        <button class="btn ghost" type="button" id="btnCancelar">Cancelar</button>
+        <button class="btn primary" type="button" id="btnSalvar">Salvar alterações</button>
+      </div>
+     </div>
+    </div>
+  </div>
+</div>
+<div class="lightbox" id="lb" hidden><button class="btn onhead small close" type="button" id="lbClose">Fechar</button><img id="lbImg" alt="Documento ampliado"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="assets/exemplo-docs.js"></script>
+<script src="assets/dados.js"></script>
+<script>
+(function(){
+const A=window.AMR,$=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let fichas=[],cad=null,fStatus="todas",ed=null,edItens=[];
+function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(bad?" bad":"");e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
+
+/* abas */
+function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));["painel","fichas","mapa","cadastros"].forEach(x=>$("v-"+x).hidden=x!==v)}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.v));
+
+function docTxt(f){return f.tipo==="ROM"?"Romaneio "+(f.romaneio||"—"):"NF "+(f.nf||"—")+" · "+(f.fornecedor||"—")}
+function confPill(f){if(f.status==="sem_acao")return"";const c=A.conf(f).situacao;return c==="devolvida"?'<span class="pill bad">Devolvida</span>':c==="pendente"?'<span class="pill em_andamento" style="background:transparent;border:1px solid currentColor">A conferir</span>':""}
+function card(f){
+  const its=A.itensValidos(f).length,pend=A.pendencias(f);
+  return `<button class="card ${f.status}" type="button" data-id="${f.id}">
+    <div class="top"><span class="num">${f.numero}</span><span class="pill ${f.tipo}">${A.TIPOS[f.tipo].curto}</span><span class="pill ${f.status}">${A.STATUS[f.status].rotulo}</span>${confPill(f)}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}</div>
+    <div class="meta">${esc(docTxt(f))}</div>
+    <div class="meta">${A.fmtData(f.dataRecebimento)} · ${its} ${its===1?"item":"itens"}${pend.includes("não conformidade")?' · <span style="color:var(--bad);font-weight:600">NC</span>':""}${f.status!=="finalizado"&&pend.includes("certificado")?' · <span style="color:var(--warn);font-weight:600">sem certificado</span>':""}</div>
+  </button>`;
+}
+function bind(root){root.querySelectorAll(".card[data-id]").forEach(c=>c.onclick=()=>abrir(fichas.find(f=>f.id===c.dataset.id)))}
+
+/* painel */
+function renderPainel(){
+  const c=s=>fichas.filter(f=>f.status===s).length;
+  const nNF=fichas.filter(f=>f.tipo==="NF").length;
+  $("kpis").innerHTML=`<button class="k" data-s="todas"><b>${fichas.length}</b><span>Fichas</span><em>${nNF} NF · ${fichas.length-nNF} romaneio</em></button>`+
+    A.ORDEM_STATUS.map(s=>`<button class="k ${s}" data-s="${s}"><b>${c(s)}</b><span>${A.STATUS[s].rotulo}</span><em>${A.STATUS[s].dica}</em></button>`).join("");
+  $("kpis").querySelectorAll(".k").forEach(b=>b.onclick=()=>{fStatus=b.dataset.s;show("fichas");renderLista()});
+  const grupo=(s)=>{const l=fichas.filter(f=>f.status===s).sort((a,b)=>(a.dataRecebimento||"").localeCompare(b.dataRecebimento||""));
+    return `<div class="col"><h3><span class="pill ${s}">${A.STATUS[s].rotulo}</span>${l.length}</h3><div class="list">${l.length?l.slice(0,8).map(card).join(""):`<div class="empty" style="padding:16px">Nada aqui.</div>`}</div></div>`};
+  const col=(titulo,pill,l)=>`<div class="col"><h3>${pill}${l.length}</h3><div class="list">${l.length?l.slice(0,8).map(card).join(""):`<div class="empty" style="padding:16px">Nada aqui.</div>`}</div></div>`;
+  const aConf=fichas.filter(f=>f.status!=="sem_acao"&&f.status!=="finalizado"&&A.conf(f).situacao==="pendente");
+  const devol=fichas.filter(f=>A.conf(f).situacao==="devolvida");
+  $("cols").innerHTML=col("",'<span class="pill em_andamento">A conferir</span>',aConf)+col("",'<span class="pill bad">Devolvidas ao campo</span>',devol)+grupo("sem_acao")+grupo("cert_pendente");
+  bind($("cols"));
+}
+
+/* fichas */
+const CHIPS={todas:"Todas",...Object.fromEntries(A.ORDEM_STATUS.map(s=>[s,A.STATUS[s].rotulo]))};
+function renderLista(){
+  $("chips").innerHTML=Object.entries(CHIPS).map(([k,l])=>`<button class="chip" aria-pressed="${k===fStatus}" data-k="${k}">${l}</button>`).join("");
+  $("chips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{fStatus=c.dataset.k;renderLista()});
+  const q=A.norm($("q").value),t=$("fTipo").value;
+  const l=fichas.filter(f=>(fStatus==="todas"||f.status===fStatus)&&(!t||f.tipo===t)&&(!q||A.norm([f.numero,f.nf,f.romaneio,f.fornecedor,...(f.itens||[]).flatMap(i=>[i.tag,i.descricao,i.certificado])].join(" ")).includes(q)))
+    .sort((a,b)=>b.numero-a.numero);
+  $("lista").innerHTML=l.length?l.map(card).join(""):`<div class="empty" style="grid-column:1/-1"><strong>Nenhuma ficha encontrada</strong>Ajuste a busca ou os filtros.</div>`;
+  bind($("lista"));
+}
+$("q").oninput=renderLista;$("fTipo").onchange=renderLista;
+
+/* mapa */
+function renderMapa(){
+  const q=A.norm($("qMapa").value);
+  const linhas=A.linhasMapa(fichas).filter(r=>!q||A.norm(r.join(" ")).includes(q));
+  $("mapaInfo").textContent=`${linhas.length} linhas · ${A.DOC_MAPA} · uma linha por item, gerada das fichas`;
+  $("tMapa").innerHTML=`<thead><tr>${A.COLS_MAPA.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${linhas.map(r=>`<tr>${r.map((v,i)=>`<td${i===3?' class="d"':""}>${esc(v)}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="15" style="padding:20px;color:var(--muted)">Nenhuma linha.</td></tr>`}</tbody>`;
+}
+$("qMapa").oninput=renderMapa;
+$("btnExport").onclick=async()=>{
+  const nome=`${A.DOC_MAPA} - Mapa Recebimento de Materiais ${A.hoje()}.csv`,dados=A.csvMapa(fichas);
+  const dl=window.claude&&window.claude.use?await window.claude.use("downloads").catch(()=>null):null;
+  if(dl){try{await dl.save({filename:nome,data:dados});toast("Mapa exportado")}catch(e){if(e&&e.code!=="declined")toast("Não foi possível exportar.",true)}return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([dados],{type:"text/csv;charset=utf-8"}));
+  a.download=nome;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast("Mapa exportado");
+};
+
+/* detalhe / edição */
+function abrir(f){
+  ed=JSON.parse(JSON.stringify(f)); edItens=ed.itens||[];
+  $("shTitle").textContent="Ficha Nº "+ed.numero;
+  $("dTipo").className="pill "+ed.tipo; $("dTipo").textContent=A.TIPOS[ed.tipo].rotulo;
+  $("dOrigem").textContent=(ed.exemplo?"Exemplo · ":"")+"lançado pelo "+(ed.origem==="campo"?"campo":"escritório")+(ed.criadoEm?" em "+A.fmtData(ed.criadoEm):"");
+  document.querySelectorAll("[data-t]").forEach(e=>e.hidden=e.dataset.t!==ed.tipo);
+  $("lRom").textContent=ed.tipo==="ROM"?"Romaneio Anglo":"Romaneio (PC-REV)";
+  $("dNf").value=ed.nf||"";$("dForn").value=ed.fornecedor||"";$("dRom").value=ed.romaneio||"";$("dData").value=ed.dataRecebimento||"";$("dObs").value=ed.observacao||"";
+  $("dlForn").innerHTML=(cad?.fornecedores||[]).map(x=>`<option value="${esc(x.nome)}">`).join("");
+  $("dStatus").innerHTML=A.ORDEM_STATUS.map(s=>`<button type="button" data-s="${s}" aria-pressed="${s===ed.status}">${A.STATUS[s].rotulo}</button>`).join("");
+  $("dStatus").querySelectorAll("button").forEach(b=>b.onclick=()=>{ed.status=b.dataset.s;$("dStatus").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));avisos()});
+  ed.assinaturas=ed.assinaturas||{};
+  $("dSign").innerHTML=[["producao","Produção Milplan"],["qualidade","Qualidade Milplan"],["fiscalizacao","Fiscalização Anglo"]].map(([k,l])=>`<div class="f"><label><input type="checkbox" data-sg="${k}" ${ed.assinaturas[k]?"checked":""}>${l}</label><input type="date" data-sgd="${k}" value="${ed.assinaturas[k]?.em||""}" ${ed.assinaturas[k]?"":"disabled"} aria-label="Data da assinatura ${l}"></div>`).join("");
+  $("dSign").querySelectorAll("[data-sg]").forEach(cb=>cb.onchange=()=>{const d=$("dSign").querySelector(`[data-sgd="${cb.dataset.sg}"]`);d.disabled=!cb.checked;if(cb.checked&&!d.value)d.value=A.hoje()});
+  $("btnExcluir").dataset.armed="";$("btnExcluir").textContent="Excluir ficha";
+  vTab="doc";vIdx=0;renderViewer();renderConf();$("devPanel").hidden=true;
+  renderItens();avisos();$("sheetBg").hidden=false;document.body.style.overflow="hidden";
+}
+function fechar(){$("sheetBg").hidden=true;document.body.style.overflow="";ed=null}
+$("btnFechar").onclick=fechar;$("btnCancelar").onclick=fechar;
+$("sheetBg").onclick=e=>{if(e.target===$("sheetBg"))fechar()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("sheetBg").hidden)fechar()});
+
+function renderItens(){
+  const und=A.UNIDADES.map(u=>`<option>${u}</option>`).join("");
+  $("dItens").innerHTML=edItens.map((it,i)=>{const zero=ed.tipo==="ROM"&&it.qtd!==""&&Number(it.qtd)===0;
+    const flag=A.conf(ed).situacao==="devolvida"&&(A.conf(ed).itens||[]).includes(i);
+    return `<tr class="${zero?"zero":""}${flag?" flag":""}" data-i="${i}"><td class="code">${i+1}</td>
+    <td><input data-k="descricao" value="${esc(it.descricao)}" aria-label="Descrição"></td>
+    <td><input data-k="tag" value="${esc(it.tag)}" aria-label="TAG"></td>
+    <td><input data-k="certificado" value="${esc(ed.tipo==="ROM"&&!it.certificado?"":it.certificado)}" placeholder="${ed.tipo==="ROM"?"OBS 1":""}" aria-label="Certificado"></td>
+    <td><select data-k="und" aria-label="Unidade">${und}</select></td>
+    <td><input data-k="qtd" type="number" step="any" min="0" value="${esc(it.qtd)}" style="width:80px" aria-label="Quantidade"></td>
+    <td><input data-k="local" value="${esc(it.local)}" aria-label="Local"></td>
+    <td><select data-k="conf" aria-label="Status do item"><option value="C">C</option><option value="NC">NC</option><option value="NA">N/A</option></select></td>
+    <td><button class="del" type="button" data-del="${i}" aria-label="Remover item">×</button></td></tr>`}).join("");
+  $("dItens").querySelectorAll("tr").forEach(tr=>{const i=+tr.dataset.i;
+    tr.querySelector('[data-k="und"]').value=edItens[i].und||"UND";tr.querySelector('[data-k="conf"]').value=edItens[i].conf||"C";
+    tr.querySelectorAll("[data-k]").forEach(inp=>inp.addEventListener("change",()=>{const k=inp.dataset.k;edItens[i][k]=k==="qtd"?(inp.value===""?"":Number(inp.value)):(["descricao","tag","local"].includes(k)?inp.value.toUpperCase():inp.value);if(k==="qtd"||k==="certificado")renderItens();avisos()}));
+    tr.querySelector("[data-del]").onclick=()=>{edItens.splice(i,1);renderItens();avisos()};
+  });
+  const v=A.itensValidos({...ed,itens:edItens}).length;
+  $("dCount").textContent=`· ${v} na ficha${v>15?" ("+Math.ceil(v/15)+" folhas)":""}`;
+  $("dZero").hidden=!(ed.tipo==="ROM"&&edItens.some(i=>i.qtd!==""&&Number(i.qtd)===0));
+}
+$("btnAddIt").onclick=()=>{edItens.push({descricao:"",tag:"",und:ed.tipo==="ROM"?"PÇ":"UND",qtd:"",certificado:"",local:edItens.at(-1)?.local||"",conf:"C"});renderItens();$("dItens").lastElementChild.querySelector("input").focus()};
+
+function coletar(){
+  const f={...ed,itens:edItens,observacao:$("dObs").value.trim(),dataRecebimento:$("dData").value,romaneio:A.norm($("dRom").value)};
+  if(f.tipo==="NF"){f.nf=$("dNf").value.trim();f.fornecedor=A.norm($("dForn").value)}
+  f.assinaturas={};$("dSign").querySelectorAll("[data-sg]").forEach(cb=>{if(cb.checked)f.assinaturas[cb.dataset.sg]={em:$("dSign").querySelector(`[data-sgd="${cb.dataset.sg}"]`).value}});
+  return f;
+}
+function avisos(){
+  if(!ed)return;const f=coletar(),d=A.duplicada(f,fichas);
+  $("dDup").hidden=!d;if(d)$("dDup").textContent=A.msgDuplicada(f,d);
+  const sem=f.tipo==="NF"&&A.itensValidos(f).some(i=>!i.certificado);
+  $("dCert").hidden=!sem;if(sem){const dest=A.destinatariosCertPendente(f);$("dCert").textContent=`Item sem certificado. ${f.status!=="cert_pendente"&&f.status!=="sem_acao"?"Considere o status Certificado pendente. ":""}Aviso por e-mail (etapa 5) iria para ${dest.length?dest.length+" destinatário(s)":"ninguém ainda: cadastre o fornecedor e os grupos em Cadastros"}.`}
+  $("btnSalvar").disabled=!!d;
+}
+["dNf","dForn","dRom"].forEach(id=>$(id).addEventListener("input",avisos));
+$("btnSalvar").onclick=async()=>{
+  const f=coletar();
+  if(f.status==="finalizado"&&f.tipo==="NF"&&A.itensValidos(f).some(i=>!i.certificado)){toast("Não dá para finalizar com item sem certificado. Use Certificado pendente.",true);return}
+  if(f.status==="finalizado"&&A.conf(f).situacao!=="aprovada"){toast("Aprove a conferência antes de finalizar.",true);return}
+  try{await A.store.salvar(f);toast("Ficha "+f.numero+" salva");fechar()}catch(e){toast(e.message||"Não foi possível salvar.",true)}
+};
+$("btnExcluir").onclick=async()=>{const b=$("btnExcluir");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Toque de novo para excluir";return}await A.store.excluir(ed.id);toast("Ficha excluída");fechar()};
+
+/* prévia dos documentos */
+let vTab="doc",vIdx=0;
+function renderViewer(){
+  const an=ed.anexos||{},docs=an.doc||[],certs=an.cert||[];
+  const tabs=[["doc",ed.tipo==="ROM"?"Romaneio":"Nota fiscal",docs]];if(ed.tipo==="NF")tabs.push(["cert","Certificados",certs]);
+  $("vTabs").innerHTML=`<div class="seg" style="width:100%">${tabs.map(([k,l,a])=>`<button type="button" data-vt="${k}" aria-pressed="${k===vTab}">${l} (${a.length})</button>`).join("")}</div>`;
+  $("vTabs").querySelectorAll("[data-vt]").forEach(b=>b.onclick=()=>{vTab=b.dataset.vt;vIdx=0;renderViewer()});
+  const arr=vTab==="cert"?certs:docs,cur=arr[vIdx];
+  $("vStage").innerHTML=cur?(cur.img?`<img src="${cur.img}" alt="${esc(cur.nome||"Documento")}">`:`<div class="none">Arquivo PDF: ${esc(cur.nome||"")}<br>A visualização de PDF entra na etapa 3.</div>`):`<div class="none">${vTab==="cert"?"Nenhum certificado anexado.":"Nenhuma foto do documento."}<br>Se faltar, devolva ao campo pedindo a foto.</div>`;
+  $("vStage").onclick=()=>{if(cur&&cur.img){$("lbImg").src=cur.img;$("lb").classList.remove("zoom");$("lb").hidden=false}};
+  $("vThumbs").innerHTML=arr.length>1?arr.map((a,i)=>`<button type="button" data-vi="${i}" aria-pressed="${i===vIdx}" aria-label="Página ${i+1}">${a.img?`<img src="${a.img}" alt="">`:'<span class="code" style="display:grid;place-items:center;width:58px;height:58px">PDF</span>'}</button>`).join(""):"";
+  $("vThumbs").querySelectorAll("[data-vi]").forEach(b=>b.onclick=()=>{vIdx=+b.dataset.vi;renderViewer()});
+}
+$("lb").onclick=e=>{if(e.target.id==="lbImg")$("lb").classList.toggle("zoom");else if(e.target.id==="lb")$("lb").hidden=true};
+$("lbClose").onclick=()=>$("lb").hidden=true;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("lb").hidden){$("lb").hidden=true;e.stopImmediatePropagation()}},true);
+
+/* conferência */
+const ACOES={enviada:"Enviada pelo campo",reenviada:"Reenviada corrigida pelo campo",aprovada:"Conferência aprovada",devolvida:"Devolvida ao campo como inconforme"};
+function renderConf(){
+  const c=A.conf(ed);
+  $("dConf").className="pill "+(c.situacao==="aprovada"?"finalizado":c.situacao==="devolvida"?"bad":"em_andamento");
+  $("dConf").textContent=A.CONFER[c.situacao];
+  $("btnAprovar").hidden=c.situacao==="aprovada";$("btnDevolver").hidden=c.situacao==="devolvida";
+  $("dDevolInfo").hidden=c.situacao!=="devolvida";
+  if(c.situacao==="devolvida")$("dDevolInfo").innerHTML=`<strong>Aguardando correção do campo.</strong> ${(c.motivos||[]).map(m=>esc(A.MOTIVOS[m]||m)).join(" · ")}${(c.itens||[]).length?` · itens ${c.itens.map(i=>i+1).join(", ")}`:""}${c.comentario?`<br>“${esc(c.comentario)}”`:""}`;
+  const h=(c.historico||[]).slice().reverse();
+  $("dHist").innerHTML=h.length?h.map(ev=>`<li><span class="when">${A.fmtData(ev.em)}</span><span><strong>${ACOES[ev.acao]||ev.acao}</strong>${ev.por?" · "+esc(ev.por):""}${ev.motivos&&ev.motivos.length?"<br>"+ev.motivos.map(m=>esc(A.MOTIVOS[m]||m)).join(" · "):""}${ev.comentario?"<br>“"+esc(ev.comentario)+"”":""}</span></li>`).join(""):'<li class="hint">Sem registros.</li>';
+}
+$("btnAprovar").onclick=async()=>{
+  const f=A.marcarConferencia(coletar(),"aprovada",{por:"Qualidade"});
+  try{await A.store.salvar(f);ed=f;renderConf();renderItens();toast("Conferência aprovada. Agora a ficha pode ser finalizada.")}catch(e){toast(e.message,true)}
+};
+let devSel=new Set();
+$("btnDevolver").onclick=()=>{
+  devSel=new Set();
+  $("devMotivos").innerHTML=Object.entries(A.MOTIVOS).map(([k,l])=>`<label class="ck"><input type="checkbox" value="${k}">${l}</label>`).join("");
+  const n=edItens.length;
+  $("devItens").innerHTML=n?edItens.map((_,i)=>`<button type="button" data-di="${i}" aria-pressed="false">${i+1}</button>`).join(""):'<span class="hint">Sem itens.</span>';
+  $("devItens").querySelectorAll("[data-di]").forEach(b=>b.onclick=()=>{const i=+b.dataset.di;devSel.has(i)?devSel.delete(i):devSel.add(i);b.setAttribute("aria-pressed",devSel.has(i))});
+  $("devCom").value="";$("devPanel").hidden=false;$("devPanel").scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+$("devCancel").onclick=()=>$("devPanel").hidden=true;
+$("devOk").onclick=async()=>{
+  const motivos=[...$("devMotivos").querySelectorAll("input:checked")].map(i=>i.value),comentario=$("devCom").value.trim();
+  if(!motivos.length){toast("Marque pelo menos um motivo.",true);return}
+  if(motivos.includes("outro")&&!comentario){toast("Explique o motivo no comentário.",true);$("devCom").focus();return}
+  let f=coletar();if(f.status==="finalizado")f.status="em_andamento";
+  f=A.marcarConferencia(f,"devolvida",{por:"Qualidade",motivos,itens:[...devSel].sort((a,b)=>a-b),comentario});
+  try{await A.store.salvar(f);toast("Ficha "+f.numero+" devolvida ao campo como inconforme");fechar()}catch(e){toast(e.message,true)}
+};
+
+/* cadastros */
+let foEd=null;
+function renderCad(){
+  if(!cad)return;
+  $("fichaIni").value=cad.fichaInicial;
+  $("proxFicha").textContent="Próxima ficha: Nº "+A.proximoNumero(fichas,cad.fichaInicial);
+  $("grupos").innerHTML=Object.entries(A.GRUPOS).map(([k,l])=>`<div class="f"><label for="g_${k}">${l} <span class="code">(${cad.grupos[k].length})</span></label><textarea id="g_${k}" rows="2" placeholder="nome@milplan.com.br">${esc(cad.grupos[k].join("\n"))}</textarea></div>`).join("")+`<div><button class="btn small" type="button" id="btnGrupos">Salvar grupos</button></div>`;
+  $("btnGrupos").onclick=async()=>{try{for(const k of Object.keys(A.GRUPOS))await A.cadastros.salvarGrupo(k,$("g_"+k).value.split(/[\n,;]+/));toast("Grupos salvos")}catch(e){toast(e.message,true)}};
+  const q=A.norm($("qForn").value);
+  const l=cad.fornecedores.filter(f=>!q||A.norm(f.nome+" "+f.cnpj).includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  $("fornList").innerHTML=l.length?l.map(f=>`<div class="forn"><div class="top"><b>${esc(f.nome)}</b>${f.cnpj?`<span class="code">${esc(f.cnpj)}</span>`:""}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}<span class="grow"></span><button class="btn ghost small" type="button" data-fo="${f.id}">Editar</button></div><div class="em">${f.emails.length?esc(f.emails.join(" · ")):'<span style="color:var(--warn)">Sem e-mail cadastrado</span>'}</div></div>`).join(""):`<div class="empty" style="padding:16px">Nenhum fornecedor${q?" encontrado":" cadastrado"}.</div>`;
+  $("fornList").querySelectorAll("[data-fo]").forEach(b=>b.onclick=()=>editForn(cad.fornecedores.find(f=>f.id===b.dataset.fo)));
+}
+function editForn(f){foEd=f||null;$("fornForm").hidden=false;$("foNome").value=f?.nome||"";$("foCnpj").value=f?.cnpj||"";$("foEmails").value=(f?.emails||[]).join("\n");$("btnExcForn").hidden=!f;$("btnExcForn").dataset.armed="";$("btnExcForn").textContent="Excluir";$("foNome").focus()}
+$("btnNovoForn").onclick=()=>editForn(null);
+$("btnCancForn").onclick=()=>{$("fornForm").hidden=true};
+$("btnSalvForn").onclick=async()=>{try{await A.cadastros.salvarFornecedor({id:foEd?.id,nome:$("foNome").value,cnpj:$("foCnpj").value.trim(),emails:$("foEmails").value.split(/[\n,;]+/)});$("fornForm").hidden=true;toast("Fornecedor salvo")}catch(e){toast(e.message,true)}};
+$("btnExcForn").onclick=async()=>{const b=$("btnExcForn");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Toque de novo";return}await A.cadastros.excluirFornecedor(foEd.id);$("fornForm").hidden=true;toast("Fornecedor excluído")};
+$("qForn").oninput=renderCad;
+$("btnFichaIni").onclick=async()=>{await A.cadastros.salvarFichaInicial($("fichaIni").value);toast("Numeração salva")};
+
+function renderTudo(){renderPainel();renderLista();renderMapa();renderCad();if(ed)avisos()}
+$("badgeDemo").hidden=A.store.modo!=="exemplo";
+A.cadastros.ouvir(c=>{cad=c;renderCad();if(ed)avisos()});
+A.store.ouvir(l=>{fichas=l;renderTudo()});
+})();
+</script>
+</body>
+</html>
