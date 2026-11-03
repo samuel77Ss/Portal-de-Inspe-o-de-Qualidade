@@ -222,6 +222,7 @@ table.its tr.flag td:first-child{box-shadow:inset 4px 0 0 var(--bad);color:var(-
           <div class="f"><label for="dRom" id="lRom">Romaneio</label><input id="dRom"></div>
           <div class="f"><label for="dData">Data de recebimento</label><input id="dData" type="date"></div>
         </div>
+        <div class="f" id="dChave" hidden></div>
         <datalist id="dlForn"></datalist>
         <div class="notice bad" id="dDup" hidden></div>
         <div class="notice" id="dCert" hidden></div>
@@ -338,6 +339,7 @@ function abrir(f){
   $("shTitle").textContent="Ficha Nº "+ed.numero;
   $("dTipo").className="pill "+ed.tipo; $("dTipo").textContent=A.TIPOS[ed.tipo].rotulo;
   $("dOrigem").textContent=(ed.exemplo?"Exemplo · ":"")+"lançado pelo "+(ed.origem==="campo"?"campo":"escritório")+(ed.criadoEm?" em "+A.fmtData(ed.criadoEm):"");
+  $("dChave").hidden=!ed.chaveNFe;if(ed.chaveNFe)$("dChave").innerHTML=`<span class="lbl">Chave de acesso (lida do código de barras)</span><span class="code">${ed.chaveNFe.replace(/(\d{4})/g,"$1 ").trim()}</span>${ed.cnpjFornecedor?`<span class="code">CNPJ ${esc(ed.cnpjFornecedor)}${ed.serie?" · série "+esc(ed.serie):""}</span>`:""}`;
   document.querySelectorAll("[data-t]").forEach(e=>e.hidden=e.dataset.t!==ed.tipo);
   $("lRom").textContent=ed.tipo==="ROM"?"Romaneio Anglo":"Romaneio (PC-REV)";
   $("dNf").value=ed.nf||"";$("dForn").value=ed.fornecedor||"";$("dRom").value=ed.romaneio||"";$("dData").value=ed.dataRecebimento||"";$("dObs").value=ed.observacao||"";

@@ -46,6 +46,20 @@
   const fmtData = s => s ? s.slice(0, 10).split("-").reverse().join("/") : "—";
   const fmtQtd = n => (n === "" || n == null) ? "" : Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 
+  /* ---------- Chave de acesso da NF-e (código de barras de 44 dígitos do DANFE) ---------- */
+  const UFS = { "11":"RO","12":"AC","13":"AM","14":"RR","15":"PA","16":"AP","17":"TO","21":"MA","22":"PI","23":"CE","24":"RN","25":"PB","26":"PE","27":"AL","28":"SE","29":"BA","31":"MG","32":"ES","33":"RJ","35":"SP","41":"PR","42":"SC","43":"RS","50":"MS","51":"MT","52":"GO","53":"DF" };
+  function dvChave(c43) { let soma = 0, peso = 2; for (let i = c43.length - 1; i >= 0; i--) { soma += +c43[i] * peso; peso = peso === 9 ? 2 : peso + 1; } const r = soma % 11; return r < 2 ? 0 : 11 - r; }
+  function lerChaveNFe(texto) {
+    const dig = String(texto || "").replace(/\D/g, "");
+    const m = dig.match(/\d{44}/); if (!m) return null;
+    const c = m[0];
+    if (dvChave(c.slice(0, 43)) !== +c[43]) return { valida: false, chave: c };
+    const fmtCnpj = x => x.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    return { valida: true, chave: c, uf: UFS[c.slice(0, 2)] || c.slice(0, 2), emissao: "20" + c.slice(2, 4) + "-" + c.slice(4, 6),
+      cnpj: fmtCnpj(c.slice(6, 20)), modelo: c.slice(20, 22), serie: String(+c.slice(22, 25)), nf: String(+c.slice(25, 34)) };
+  }
+  const soCnpj = s => String(s || "").replace(/\D/g, "");
+
   /* Chave de duplicidade: NF = nº + fornecedor; Romaneio = nº do romaneio */
   function chaveDoc(f) {
     if (f.tipo === "ROM") return f.romaneio ? "ROM|" + norm(f.romaneio) : "";
@@ -53,6 +67,8 @@
   }
   function duplicada(f, todas) {
     const k = chaveDoc(f);
+    const porChave = f.chaveNFe ? todas.find(o => o.id !== f.id && o.chaveNFe === f.chaveNFe) : null;
+    if (porChave) return porChave;
     if (!k) return null;
     return todas.find(o => o.id !== f.id && chaveDoc(o) === k) || null;
   }
@@ -117,13 +133,13 @@
       ["VIGA - C-4741-175 A-203", "5858-0415-1439 H1", 1]
     ].map(([descricao, tag, qtd]) => ({ descricao, tag, und: "PÇ", qtd, certificado: "", local: "PLATÔ-13", conf: "C" }));
     return [
-      { id: "ex-1609", exemplo: true, numero: 1609, tipo: "NF", nf: "10990", romaneio: "4166-REV-00", pedido: "004166", fornecedor: "WEG TINTAS", fornecimento: "MILPLAN ENGENHARIA", dataRecebimento: "2026-08-15", status: "finalizado", itens: nfItens, observacao: "", assinaturas: { producao: { em: "2026-08-19" }, qualidade: { em: "2026-08-19" }, fiscalizacao: { em: "2026-10-14" } }, anexos: { doc: anexo("nf", "DANFE NF 10990"), cert: anexo("cert", "Certificado 3023651") }, conferencia: { situacao: "aprovada", historico: [{ acao: "enviada", em: "2026-08-15T12:00:00Z", por: "Campo" }, { acao: "aprovada", em: "2026-08-16T12:00:00Z", por: "Qualidade" }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t },
+      { id: "ex-1609", exemplo: true, numero: 1609, tipo: "NF", nf: "10990", serie: "1", cnpjFornecedor: "60.621.141/0007-49", chaveNFe: "31260860621141000749550010000109901797053194", romaneio: "4166-REV-00", pedido: "004166", fornecedor: "WEG TINTAS", fornecimento: "MILPLAN ENGENHARIA", dataRecebimento: "2026-08-15", status: "finalizado", itens: nfItens, observacao: "", assinaturas: { producao: { em: "2026-08-19" }, qualidade: { em: "2026-08-19" }, fiscalizacao: { em: "2026-10-14" } }, anexos: { doc: anexo("nf", "DANFE NF 10990"), cert: anexo("cert", "Certificado 3023651") }, conferencia: { situacao: "aprovada", historico: [{ acao: "enviada", em: "2026-08-15T12:00:00Z", por: "Campo" }, { acao: "aprovada", em: "2026-08-16T12:00:00Z", por: "Qualidade" }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t },
       { id: "ex-2290", exemplo: true, numero: 2290, tipo: "ROM", nf: "", romaneio: "1039-FLT-2026", pedido: "", fornecedor: "ANGLO AMERICAN", fornecimento: "ANGLO AMERICAN", dataRecebimento: hoje(), status: "em_andamento", itens: romItens, observacao: OBS_ANGLO, assinaturas: {}, anexos: { doc: anexo("rom", "Romaneio 1039-FLT-2026"), cert: [] }, conferencia: { situacao: "devolvida", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar.", historico: [{ acao: "enviada", em: t, por: "Campo" }, { acao: "devolvida", em: t, por: "Qualidade", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar." }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t }
     ];
   }
 
   /* ---------- Armazenamento local (etapa 1) ---------- */
-  const KEY = "amr_recebimento_fichas_v2";
+  const KEY = "amr_recebimento_fichas_v3";
   const ouvintes = new Set();
   let cache = null;
   function ler() {
@@ -203,6 +219,7 @@
     },
     async salvarFichaInicial(n) { const c = lerCad(); c.fichaInicial = Math.max(1, parseInt(n, 10) || FICHA_INICIAL); gravarCad(); avisarCad(); },
     fichaInicial() { return lerCad().fichaInicial || FICHA_INICIAL; },
+    fornecedorPorCnpj(cnpj) { const c = soCnpj(cnpj); return c ? lerCad().fornecedores.find(f => soCnpj(f.cnpj) === c) || null : null; },
     fornecedorPorNome(nome) { const n = normForn(nome); return lerCad().fornecedores.find(f => normForn(f.nome) === n) || null; }
   };
   /* Destinatários do aviso de certificado pendente (envio real na etapa 5) */
@@ -212,6 +229,6 @@
     return [...new Set([...(fo?.emails || []), ...c.grupos.suprimentos, ...c.grupos.logistica, ...c.grupos.qualidade])];
   }
 
-  window.AMR = { MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();

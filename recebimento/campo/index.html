@@ -67,6 +67,23 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .devol-msg ul{margin:0;padding-left:18px}
 .hbar h1{font-size:1.3rem}
 .hbar .badge-demo{font-size:.6rem;padding:2px 5px}
+.scanbtn{background:var(--head);border-color:var(--head);color:var(--head-ink)}
+.chave{display:grid;gap:4px;background:var(--ok-bg);color:var(--ok);border-radius:6px;padding:9px 11px;font-size:.82rem}
+.chave .code{color:inherit;word-break:break-all}
+.chave.bad{background:var(--bad-bg);color:var(--bad)}
+.tagwrap{display:flex;gap:6px}
+.tagwrap input{flex:1;min-width:0}
+.tagwrap button{flex:0 0 42px;min-height:42px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.tagwrap svg,.scanbtn svg{width:20px;height:20px}
+.scanner{position:fixed;inset:0;z-index:70;background:#000;display:flex;flex-direction:column;color:#fff}
+.scanner .sc-top{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px))}
+.scanner .sc-top b{flex:1;font-family:var(--f-display);font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em}
+.scanner .sc-top button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:8px 12px;font:600 .9rem var(--f-body)}
+.scanner #scReader{flex:1;min-height:0;position:relative;overflow:hidden}
+.scanner #scReader video{width:100%!important;height:100%!important;object-fit:cover}
+.scanner .sc-hint{padding:12px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:10px;font-size:.88rem;opacity:.95}
+.scanner .sc-hint input{background:#1c1c1c;color:#fff;border-color:#444}
+.scanner .sc-err{background:#5a1e18;color:#ffd9d4;border-radius:6px;padding:10px;font-size:.85rem}
 .back{background:none;border:0;color:var(--head-ink);font:600 .9rem var(--f-body);padding:8px 8px 8px 0;cursor:pointer}
 </style>
 </head>
@@ -118,6 +135,8 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
         <h3><span class="n">1</span><span id="tDoc">Nota fiscal</span></h3>
         <div class="seg" id="segTipo"></div>
         <div class="shot">
+          <button class="btn scanbtn" type="button" id="btnScanDoc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg><span id="scanDocTxt">Escanear código de barras da NF</span></button>
+          <div class="chave" id="chaveBox" hidden></div>
           <div class="shot-btns">
             <label class="btn primary" for="fotoDoc">Fotografar documento</label>
             <label class="btn" for="fotoDocGal">Galeria / PDF</label>
@@ -187,14 +206,24 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
     <button class="btn primary" type="button" id="btnEnviar">Enviar recebimento</button>
   </div>
 </div>
+<div class="scanner" id="scanner" hidden role="dialog" aria-modal="true" aria-labelledby="scTitle">
+  <div class="sc-top"><b id="scTitle">Escanear</b><button type="button" id="scFechar">Fechar</button></div>
+  <div id="scReader"></div>
+  <div class="sc-hint">
+    <span id="scDica">Aponte a câmera para o código. A leitura é automática.</span>
+    <div class="sc-err" id="scErr" hidden></div>
+    <div style="display:flex;gap:8px"><input id="scManual" inputmode="numeric" placeholder="Ou digite o código" aria-label="Digitar o código"><button class="btn primary" type="button" id="scUsar">Usar</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="../assets/vendor/html5-qrcode.min.js"></script>
 <script src="../assets/exemplo-docs.js"></script>
 <script src="../assets/dados.js"></script>
 <script>
 (function(){
 const A=window.AMR, $=id=>document.getElementById(id);
-let editando=null, fichas=[], tipo="NF", itens=[], fotosDoc=[], fotosCert=[], view="inicio";
+let chaveNF=null, editando=null, fichas=[], tipo="NF", itens=[], fotosDoc=[], fotosCert=[], view="inicio";
 
 function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(bad?" bad":"");e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -239,6 +268,8 @@ function setTipo(t){
   tipo=t;
   document.querySelectorAll("[data-tipo]").forEach(e=>e.hidden=e.dataset.tipo!==t);
   $("tDoc").textContent=t==="NF"?"Nota fiscal":"Romaneio Anglo";
+  $("scanDocTxt").textContent=t==="NF"?"Escanear código de barras da NF":"Escanear código do romaneio";
+  if(t!=="NF")setChave(null);
   $("romNota").hidden=t!=="ROM"; $("nObs").textContent=t==="NF"?"4":"3";
   $("segTipo").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===t));
   renderItens(); checarDup();
@@ -248,14 +279,14 @@ $("segTipo").querySelectorAll("button").forEach(b=>b.onclick=()=>setTipo(b.datas
 
 function novoItem(){return{descricao:"",tag:"",und:tipo==="ROM"?"PÇ":"UND",qtd:"",certificado:"",local:$("localPadrao").value.trim().toUpperCase(),conf:"C"}}
 function abrirNovo(t){
-  editando=null;$("segTipo").hidden=false;$("devolMsg").hidden=true;$("btnChegada").hidden=false;$("btnEnviar").textContent="Enviar recebimento";
+  editando=null;setChave(null);$("segTipo").hidden=false;$("devolMsg").hidden=true;$("btnChegada").hidden=false;$("btnEnviar").textContent="Enviar recebimento";
   itens=[novoItem()]; fotosDoc=[]; fotosCert=[];
   ["nf","fornecedor","romaneio","romaneioA","obs","localPadrao"].forEach(id=>$(id).value="");
   $("data").value=A.hoje();
   setTipo(t); itens=[novoItem()]; renderItens(); renderThumbs(); show("lancar");
 }
 function abrirEdicao(f){
-  editando=f;const c=A.conf(f);
+  editando=f;const c=A.conf(f);setChave(f.chaveNFe?A.lerChaveNFe(f.chaveNFe):null);
   setTipo(f.tipo);$("segTipo").hidden=true;
   $("nf").value=f.nf||"";$("fornecedor").value=f.fornecedor||"";$("romaneio").value=f.tipo==="NF"?(f.romaneio||""):"";$("romaneioA").value=f.tipo==="ROM"?(f.romaneio||""):"";
   $("data").value=f.dataRecebimento||A.hoje();$("localPadrao").value="";
@@ -278,7 +309,7 @@ function renderItens(){
       <div class="item-head"><b>Item ${i+1}</b>${flag?'<span class="pill bad">Corrigir</span>':""}${zero?'<span class="zero-note">0 entregue · fora da ficha</span>':""}${itens.length>1?`<button type="button" class="x" data-del="${i}">Remover</button>`:""}</div>
       <div class="f"><label>Descrição</label><input data-k="descricao" value="${esc(it.descricao)}" autocomplete="off"></div>
       <div class="grid2">
-        <div class="f"><label>TAG / código</label><input data-k="tag" value="${esc(it.tag)}" autocomplete="off"></div>
+        <div class="f"><label>TAG / código</label><div class="tagwrap"><input data-k="tag" value="${esc(it.tag)}" autocomplete="off"><button type="button" data-scantag="${i}" aria-label="Escanear TAG do item ${i+1}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/><path d="M13 7h4v4M7 13v4h4"/></svg></button></div></div>
         <div class="f"><label>${tipo==="ROM"?"Qtd. entregue":"Qtd. recebida"}</label><input data-k="qtd" type="number" min="0" step="any" inputmode="decimal" value="${esc(it.qtd)}"></div>
         <div class="f"><label>Unidade</label><select data-k="und">${und}</select></div>
         ${tipo==="NF"?`<div class="f"><label>Nº certificado</label><input data-k="certificado" value="${esc(it.certificado)}" autocomplete="off"></div>`:`<div class="f"><label>Certificado</label><input value="OBS 1 (sem certificado)" disabled></div>`}
@@ -294,6 +325,7 @@ function renderItens(){
       if(k==="qtd"&&tipo==="ROM"){const z=inp.value!==""&&Number(inp.value)===0;if(z!==el.classList.contains("zero")){const pos=inp.selectionStart;renderItens();const n=$("itens").querySelector(`[data-i="${i}"] [data-k="qtd"]`);n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}}
     }));
     el.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{itens[i].conf=b.dataset.c;el.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+    const sb=el.querySelector("[data-scantag]");if(sb)sb.onclick=()=>abrirScanner("TAG do item "+(i+1),"Aponte para a etiqueta, código de barras ou QR code do material.",txt=>{itens[i].tag=A.norm(txt);renderItens();toast("TAG do item "+(i+1)+" preenchida")});
     const d=el.querySelector("[data-del]"); if(d)d.onclick=()=>{itens.splice(i,1);renderItens()};
   });
 }
@@ -313,11 +345,61 @@ function thumbs(arr,el){el.innerHTML=arr.map((f,i)=>`<figure>${f.pdf?`<div style
 function renderThumbs(){thumbs(fotosDoc,$("thumbsDoc"));thumbs(fotosCert,$("thumbsCert"))}
 [["fotoDoc",()=>fotosDoc],["fotoDocGal",()=>fotosDoc],["fotoCert",()=>fotosCert],["fotoCertGal",()=>fotosCert]].forEach(([id,arr])=>$(id).onchange=e=>{lerFotos(e.target.files,arr());e.target.value=""});
 
+/* ---------- scanner de código de barras / QR ---------- */
+let leitor=null,scDestino=null,scLido=false;
+const FMT=window.Html5QrcodeSupportedFormats;
+function abrirScanner(titulo,dica,destino){
+  scDestino=destino;scLido=false;$("scTitle").textContent=titulo;$("scDica").textContent=dica;$("scErr").hidden=true;$("scManual").value="";
+  $("scanner").hidden=false;document.body.style.overflow="hidden";
+  if(!window.Html5Qrcode){erroScan("O leitor não carregou. Verifique a internet e abra o app de novo, ou digite o código abaixo.");return}
+  const formatos=FMT?[FMT.CODE_128,FMT.QR_CODE,FMT.CODE_39,FMT.EAN_13,FMT.ITF,FMT.DATA_MATRIX]:undefined;
+  leitor=new Html5Qrcode("scReader",{formatsToSupport:formatos,verbose:false,experimentalFeatures:{useBarCodeDetectorIfSupported:true}});
+  const largura=Math.min(window.innerWidth-40,520);
+  leitor.start({facingMode:"environment"},{fps:12,qrbox:(w,h)=>({width:Math.min(w-30,520),height:Math.min(Math.round(h*0.32),220)}),aspectRatio:window.innerHeight/window.innerWidth},
+    txt=>{if(scLido)return;scLido=true;if(navigator.vibrate)navigator.vibrate(80);fecharScanner().then(()=>scDestino(txt))},()=>{})
+  .catch(e=>{const m=String(e&&e.message||e);erroScan(/NotAllowed|Permission/i.test(m)?"A câmera foi bloqueada. Libere a câmera para este app nas configurações do navegador, ou digite o código abaixo.":/NotFound|Requested device/i.test(m)?"Nenhuma câmera encontrada neste aparelho. Digite o código abaixo.":"Não foi possível abrir a câmera. Digite o código abaixo.")});
+}
+function erroScan(t){$("scErr").textContent=t;$("scErr").hidden=false;$("scManual").focus()}
+async function fecharScanner(){
+  $("scanner").hidden=true;document.body.style.overflow="";
+  if(leitor){try{if(leitor.isScanning)await leitor.stop();leitor.clear()}catch(e){}leitor=null}
+}
+$("scFechar").onclick=()=>fecharScanner();
+$("scUsar").onclick=()=>{const v=$("scManual").value.trim();if(!v){$("scManual").focus();return}const d=scDestino;fecharScanner().then(()=>d(v))};
+$("scManual").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("scUsar").click()}});
+
+function setChave(info){
+  chaveNF=info;const b=$("chaveBox");
+  if(!info){b.hidden=true;return}
+  b.hidden=false;b.className="chave"+(info.valida?"":" bad");
+  b.innerHTML=info.valida?`<strong>Código lido: NF ${esc(info.nf)} · série ${esc(info.serie)} · ${esc(info.uf)} · emitida em ${info.emissao.slice(5)}/${info.emissao.slice(0,4)}</strong><span>CNPJ do fornecedor: ${esc(info.cnpj)}</span><span class="code">${info.chave.replace(/(\d{4})/g,"$1 ").trim()}</span>`
+    :`<strong>Código inválido: o dígito verificador não confere.</strong><span>Escaneie de novo ou confira o código digitado.</span>`;
+}
+function aplicarLeituraNF(txt){
+  const info=A.lerChaveNFe(txt);
+  if(!info){toast("Esse código não é uma chave de NF (44 dígitos). Tente o código de barras do DANFE, no alto da nota.",true);return}
+  setChave(info);if(!info.valida){toast("Código lido com erro. Escaneie de novo.",true);return}
+  $("nf").value=info.nf;
+  const fo=A.cadastros.fornecedorPorCnpj(info.cnpj);
+  if(fo)$("fornecedor").value=fo.nome;
+  else if(!$("fornecedor").value){$("fornecedor").focus();toast("Fornecedor ainda não cadastrado. Digite o nome dele.")}
+  const d=checarDup();
+  if(!d)toast("NF "+info.nf+(fo?" · "+fo.nome:"")+" preenchida pelo código");
+}
+function aplicarLeituraRom(txt){
+  const t=A.norm(txt),m=t.match(/\d{1,5}-FLT-\d{4}/);
+  $("romaneioA").value=m?m[0]:t;checarDup();
+  toast(m?"Romaneio "+m[0]+" preenchido pelo código":"Código lido. Confira o nº do romaneio.");
+}
+$("btnScanDoc").onclick=()=>tipo==="NF"
+  ?abrirScanner("Código de barras da NF","Aponte para o código de barras do DANFE (no alto da nota), com o celular deitado se precisar.",aplicarLeituraNF)
+  :abrirScanner("Código do romaneio","Aponte para o código de barras ou QR code do romaneio.",aplicarLeituraRom);
+
 /* duplicidade */
 function montar(){
   const base=editando?JSON.parse(JSON.stringify(editando)):{origem:"campo",assinaturas:{},criadoPor:"Campo"};
   const f={...base,tipo,dataRecebimento:$("data").value,observacao:$("obs").value.trim(),itens:itens.map(x=>({...x,qtd:x.qtd===""?"":Number(x.qtd)})),anexos:{doc:fotosDoc,cert:fotosCert}};
-  if(tipo==="NF"){Object.assign(f,{nf:$("nf").value.trim(),fornecedor:A.norm($("fornecedor").value),romaneio:A.norm($("romaneio").value),fornecimento:"MILPLAN ENGENHARIA"})}
+  if(tipo==="NF"){Object.assign(f,{chaveNFe:chaveNF&&chaveNF.valida&&chaveNF.nf===$("nf").value.trim()?chaveNF.chave:"",serie:chaveNF?.serie||f.serie||"",cnpjFornecedor:chaveNF?.cnpj||f.cnpjFornecedor||"",nf:$("nf").value.trim(),fornecedor:A.norm($("fornecedor").value),romaneio:A.norm($("romaneio").value),fornecimento:"MILPLAN ENGENHARIA"})}
   else{Object.assign(f,{nf:"",romaneio:A.norm($("romaneioA").value),fornecedor:"ANGLO AMERICAN",fornecimento:"ANGLO AMERICAN",observacao:[A.OBS_ANGLO,$("obs").value.trim()].filter(Boolean).join("\n")})}
   return f;
 }
