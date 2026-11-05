@@ -85,25 +85,43 @@
     return (f.itens || []).filter(i => (i.descricao || i.tag) && !(f.tipo === "ROM" && Number(i.qtd) === 0));
   }
   /* ---------- Materiais críticos (CMC) — exigem certificado de qualidade ----------
-     Fonte: CMC-MIL-0002 (Mecânica), 447.QUA.FP-40 Rev.00, de 06/03/2026.
+     Fontes: CMC-MIL-0001 (Civil) e CMC-MIL-0002 (Mecânica), 447.QUA.FP-40 Rev.00, de 06/03/2026.
      Legenda: W testemunho opcional · R verificação da documentação · H hold point · A inspeção 100%
               C inspeção de produto · D verificação dimensional · V exame visual · M inspeção por amostragem */
   const CMC = [
+    { id: "cimento", rotulo: "Cimento", tipo: "CP II / CP III / CP V ARI", doc: "CMC-MIL-0001", setor: "R", cq: "R, C, M", cliente: "W, R",
+      evidencia: "Certificado de qualidade, conferido com o pedido de compra",
+      re: [/^CIMENTO\b(?!.*(COLA|ADESIV|COLANTE|BRANCO|AMIANTO|FIBRO))/] },
+    { id: "concreto", rotulo: "Concreto usinado", tipo: "Concreto usinado", doc: "CMC-MIL-0001", setor: "R", cq: "R, C, M", cliente: "W, R",
+      evidencia: "Nota de transporte conferida com o projeto, slump test e corpo de prova (controle tecnológico do PCQ)",
+      codigos: [/^SV0120/], re: [/^CONCRETO (USINADO|BOMBEAVEL|FCK|C ?\d\d)/, /^SERVICO (DE )?APLICACAO (DE )?CONCRETO/] },
+    { id: "ferragem", rotulo: "Ferragem", tipo: "Barra / tela", doc: "CMC-MIL-0001", setor: "R, C, V", cq: "C, R", cliente: "W, R",
+      evidencia: "Certificado de qualidade da usina, conferido com o pedido de compra",
+      re: [/^VERGALHAO/, /^(ACO|BARRA( DE)? ACO|FERRO)\b.*\bCA ?-?(25|50|60)\b/, /^TELA (SOLDADA|ACO|DE ACO|NERVURADA|Q ?-?\d)/] },
+    { id: "graute", rotulo: "Graute", tipo: "Cimentício / epóxi", doc: "CMC-MIL-0001", setor: "R", cq: "R, C, M", cliente: "W, R",
+      evidencia: "Certificado de qualidade; cimentício: corpo de prova; epóxi: acondicionar entre +20 °C e +27 °C por 48 h antes da aplicação",
+      re: [/^GRAUTE|^GROUT/] },
     { id: "chumbador", rotulo: "Chumbador", tipo: "Barra roscada / tipo J / químico", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R", cliente: "W, R",
-      re: [/CHUMBADOR|BARRA ROSCADA|ANCORAGEM QUIMICA|ADESIVO.{0,20}ANCORAGEM/] },
+      evidencia: "Certificado de qualidade, conferido com o pedido de compra",
+      re: [/CHUMBADOR|BARRA ROSCADA|BARRA (DE )?ANCORAGEM|ANCORAGEM QUIMICA|ADESIVO.{0,20}ANCORAGEM/] },
     { id: "solda", rotulo: "Consumível de soldagem", tipo: "Eletrodo, arame e vareta", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R, M", cliente: "W, R",
+      evidencia: "Certificado de qualidade, conferido com o pedido de compra",
       re: [/^ELETRODO\b/, /^ARAME (TUBULAR|MIG|MAG|DE SOLDA|SOLDA|SOLIDO)/, /^ARAME\b.*\b(ER ?70|E ?71|AWS)/, /^VARETA\b/] },
     { id: "fixacao", rotulo: "Elemento de fixação", tipo: "Alta resistência", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R, M", cliente: "W, R",
+      evidencia: "Certificado de qualidade, conferido com o pedido de compra",
       re: [/^(PARAFUSO|PORCA|ARRUELA|ESTOJO|PRISIONEIRO)\b.*(ALTA RESIST|A ?325|A ?490|A ?193|A ?194|\bB7\b|\b2H\b|\b8\.8\b|\b10\.9\b|F ?1852|GRAU ?8|GR\.? ?8\b)/] },
     { id: "tintas", rotulo: "Tinta", tipo: "Látex, acrílica, esmalte, epóxi, diluente", doc: "CMC-MIL-0002", setor: "R", cq: "C, R, M", cliente: "W, R",
+      evidencia: "Certificado de qualidade, conferido com o pedido de compra",
       re: [/^(TINTA|CATALISADOR (DE )?TINTA|LATEX|ESMALTE|DILUENTE|THINNER|PRIMER|VERNIZ)\b/] }
   ];
   const LEGENDA_CMC = { W: "Testemunho opcional", R: "Verificação da documentação", H: "Hold point (teste exigido)", A: "Inspeção 100%", C: "Inspeção de produto", D: "Verificação dimensional", V: "Exame visual", M: "Inspeção por amostragem", NA: "Não se aplica" };
   const semAcento = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
   function materialCritico(descricao, codigo) {
     const c = String(codigo || "").trim().toUpperCase();
-    if (c && !/^MT/.test(c)) return null;
     const d = semAcento(descricao);
+    const porCodigo = c ? CMC.find(g => (g.codigos || []).some(r => r.test(c))) : null;
+    if (porCodigo) return porCodigo;
+    if (c && !/^MT/.test(c)) return null;
     return CMC.find(g => g.re.some(r => r.test(d))) || null;
   }
   /* Exige certificado? Valor marcado no item, ou: NF + material crítico do CMC */

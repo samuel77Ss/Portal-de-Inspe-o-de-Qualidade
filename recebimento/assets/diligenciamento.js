@@ -33,6 +33,7 @@
   function familia(codigo) {
     const p = String(codigo || "").slice(0, 2).toUpperCase();
     if (p === "MT") return { id: "material", rotulo: "Material de obra", certificado: true, recebe: true };
+    if (/^SV0120/i.test(String(codigo || ""))) return { id: "concreto", rotulo: "Concreto usinado", certificado: true, recebe: true };
     if (p === "SV" || p === "IN") return { id: "servico", rotulo: p === "SV" ? "Serviço" : "Indenização", certificado: false, recebe: false };
     if (p === "ES") return { id: "epi", rotulo: "EPI / sinalização", certificado: false, recebe: true };
     return { id: "outros", rotulo: "Escritório / equipamentos", certificado: false, recebe: true };
