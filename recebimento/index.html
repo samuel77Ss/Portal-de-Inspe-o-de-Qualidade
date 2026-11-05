@@ -511,6 +511,7 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
 <script src="assets/atualizacao.js"></script>
 <script src="assets/diligenciamento.js"></script>
 <script src="assets/importar.js"></script>
+<script src="assets/planilhas.js"></script>
 <script>
 (function(){
 const A=window.AMR,$=id=>document.getElementById(id);
@@ -617,36 +618,33 @@ $("qMapa").oninput=()=>{lim.mapa=300;renderMapa()};
 /* ---------- Excel (.xlsx) ---------- */
 function dataXL(iso){if(!iso)return "";const [y,m,d]=String(iso).slice(0,10).split("-").map(Number);return y?new Date(y,m-1,d):""}
 const semAcentoArq=n=>String(n).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\\/:*?"<>|]+/g,"-");
-function baixarXlsx(wb,nome){
-  nome=semAcentoArq(nome);
-  try{const buf=window.XLSX.write(wb,{bookType:"xlsx",type:"array",compression:true,cellDates:true});
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
-    a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Arquivo gerado: "+nome)}
+const fmtAgora=()=>new Date().toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).replace(","," às");
+function infoXL(extra){const c=CT();return `${c.nome}${c.numero?" · Contrato "+c.numero:""}${extra?" · "+extra:""} · Atualizado em ${fmtAgora()} · Gerado pelo Nexum – Recebimento inteligente`}
+async function xl(nome,abas,btn){
+  nome=semAcentoArq(nome);const txt=btn?btn.textContent:"";
+  if(btn){btn.disabled=true;btn.textContent="Gerando planilha…"}
+  try{await NXXL.gerar(nome,abas);toast("Planilha gerada: "+nome)}
   catch(e){console.error(e);toast("Não consegui gerar o Excel: "+(e.message||e),true)}
+  finally{if(btn){btn.disabled=false;btn.textContent=txt}}
 }
+const numQ=v=>{if(v===""||v===null||v===undefined)return "";const q=typeof v==="number"?v:Number(String(v).replace(/\./g,"").replace(",","."));return isFinite(q)?q:v};
 function abaMapa(lista,ctrObj){
-  const X=window.XLSX,linhas=[];
-  A.linhasMapa(lista).forEach(r=>{const o=r.slice();const q=Number(String(o[9]).replace(/\./g,"").replace(",","."));if(o[9]!==""&&isFinite(q))o[9]=q;const n=Number(o[1]);if(isFinite(n))o[1]=n;if(o[2]!==""&&isFinite(Number(o[2])))o[2]=Number(o[2]);linhas.push(o)});
   const datas=new Map();lista.forEach(f=>datas.set(String(f.numero),f.dataRecebimento));
-  linhas.forEach(o=>{o[10]=dataXL(datas.get(String(o[1])))||""});
-  const topo=[[`MAPA - RECEBIMENTO DE MATERIAIS · ${A.DOC_MAPA} · ${ctrObj.projeto}`],[`Data de atualização: ${A.fmtData(A.hoje())}`,"","","",`Gerado pelo Nexum`],[]];
-  const ws=X.utils.aoa_to_sheet([...topo,A.COLS_MAPA,...linhas],{cellDates:true,dateNF:"dd/mm/yyyy"});
-  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:14}}];
-  ws["!cols"]=[14,9,6,60,18,14,18,22,7,10,13,20,34,22,8].map(w=>({wch:w}));
-  ws["!autofilter"]={ref:X.utils.encode_range({s:{r:3,c:0},e:{r:3+linhas.length,c:14}})};
-  for(let r=4;r<4+linhas.length;r++){const c=ws[X.utils.encode_cell({r,c:10})];if(c&&c.t==="d")c.z="dd/mm/yyyy"}
-  return ws;
+  const linhas=A.linhasMapa(lista).map(r=>{const o=r.slice();o[1]=isFinite(Number(o[1]))?Number(o[1]):o[1];if(o[2]!==""&&isFinite(Number(o[2])))o[2]=Number(o[2]);o[9]=numQ(o[9]);o[10]=dataXL(datas.get(String(r[1])))||"";return o});
+  const cnt=s=>lista.filter(f=>f.status===s).length;
+  return {nome:"Mapa FP-11",titulo:"MAPA - RECEBIMENTO DE MATERIAIS",subtitulo:`${A.DOC_MAPA} · ${ctrObj.projeto}`,info:infoXL(),congelarCol:2,
+    kpis:[["Fichas",lista.length],["Itens",linhas.length],["Finalizadas",cnt("finalizado"),"ok"],["Em andamento",cnt("em_andamento"),"prog"],["Certificado pendente",cnt("cert_pendente"),"warn"]],
+    cols:[{h:"STATUS",w:17,tipo:"cor"},{h:"FICHA N°",w:9,tipo:"int",forte:true},{h:"ITEM",w:6,tipo:"int"},{h:"DESCRIÇÃO",w:56},{h:"TAG",w:18},{h:"NOTA FISCAL",w:13,al:"center"},{h:"ROMANEIO",w:17,al:"center"},{h:"CERTIFICADO",w:22,tipo:"cor"},{h:"UND",w:7,al:"center"},{h:"QUANT. RECEBIDA",w:11,tipo:"num"},{h:"DATA RECEBIMENTO",w:13,tipo:"data"},{h:"FORNECIMENTO",w:21},{h:"FORNECEDOR",w:32},{h:"LOCALIZAÇÃO / ARMAZENAMENTO",w:22},{h:"STATUS ITEM",w:9,tipo:"cor"}],
+    linhas,vazio:"Nenhuma ficha no período."};
 }
-function exportarMapa(lista,sufixo){
-  const X=window.XLSX;if(!X){toast("O gerador de Excel não carregou. Recarregue a página.",true);return}
+function exportarMapa(lista,sufixo,btn){
   if(!lista.length){toast("Não há fichas para exportar nesse período.",true);return}
-  const wb=X.utils.book_new();X.utils.book_append_sheet(wb,abaMapa(lista,CT()),"Mapa FP-11");
-  baixarXlsx(wb,`${A.DOC_MAPA} - Mapa Recebimento - ${CT().nome}${sufixo?" - "+sufixo:""} - ${A.hoje()}.xlsx`);
+  xl(`${A.DOC_MAPA} - Mapa Recebimento - ${CT().nome}${sufixo?" - "+sufixo:""} - ${A.hoje()}.xlsx`,[abaMapa(lista,CT())],btn);
 }
 $("btnExport").onclick=()=>{
   const q=A.norm($("qMapa").value);
   const l=q?fichas.filter(f=>A.linhasMapa([f]).some(r=>A.norm(r.join(" ")).includes(q))):fichas;
-  exportarMapa(l,q?"filtrado":"");
+  exportarMapa(l,q?"filtrado":"",$("btnExport"));
 };
 
 /* detalhe / edição */
@@ -1018,7 +1016,7 @@ function renderRel(){
 function loteSel(){const de=+$("relDe").value||0,ate=+$("relAte").value||0;return fichas.filter(f=>+f.numero>=Math.min(de,ate)&&+f.numero<=Math.max(de,ate)&&A.itensValidos(f).length).sort((a,b)=>a.numero-b.numero)}
 function infoLote(){const n=loteSel().length;$("relFichasInfo").textContent=n?`${n} ficha(s) com itens no intervalo${n>150?" · reduza para até 150":""}`:"Nenhuma ficha com itens nesse intervalo."}
 $("relDe").oninput=$("relAte").oninput=infoLote;
-$("relMapa").onclick=()=>{const p=$("relMapaPer").value;exportarMapa(p?fichas.filter(f=>(f.dataRecebimento||"").startsWith(p)):fichas,p)};
+$("relMapa").onclick=()=>{const p=$("relMapaPer").value;exportarMapa(p?fichas.filter(f=>(f.dataRecebimento||"").startsWith(p)):fichas,p,$("relMapa"))};
 $("relFichas").onclick=async()=>{
   const l=loteSel();if(!l.length){toast("Nenhuma ficha com itens nesse intervalo.",true);return}
   if(l.length>150){toast("São "+l.length+" fichas. Gere em lotes de até 150.",true);return}
@@ -1030,25 +1028,39 @@ $("relFichas").onclick=async()=>{
   catch(e){toast(e.message||"Não foi possível gerar o PDF.",true)}finally{b.disabled=false;b.textContent="Gerar PDF das fichas"}
 };
 $("relPend").onclick=()=>{
-  const X=window.XLSX,wb=X.utils.book_new();
-  const cert=fichas.flatMap(f=>A.itensValidos(f).map((i,n)=>({f,i,n:f.itens.indexOf(i)})).filter(x=>A.certSituacao(x.f,x.i)==="pendente")).map(x=>[x.f.numero,x.f.nf,x.f.fornecedor,dataXL(x.f.dataRecebimento),x.n+1,x.i.descricao,x.i.tag,x.i.und,x.i.qtd,(A.materialCritico(x.i.descricao,x.i.tag)||{}).rotulo||"",(x.f.cobrancas||[]).length?"Sim":"Não"]);
-  const all=itensPend(),lin=p=>p.item!==undefined?p.item+1:"";
-  const falta=all.filter(x=>x.p.tipo==="falta"&&x.p.campo!=="lacuna").map(x=>[x.f.numero,x.f.tipo==="ROM"?"Romaneio "+(x.f.romaneio||""):"NF "+(x.f.nf||""),x.f.fornecedor,NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p)]);
-  const auto=all.filter(x=>x.p.tipo==="auto").map(x=>[x.f.numero,x.f.tipo==="ROM"?"Romaneio "+(x.f.romaneio||""):"NF "+(x.f.nf||""),NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p),x.p.campo==="dataRecebimento"?A.fmtData(x.p.valor):x.p.valor,x.p.regra]);
-  const lac=lacs.map(f=>[f.numero,"Número pulado na sequência do mapa"]);
-  const add=(nome,cab,rows,w)=>{const ws=X.utils.aoa_to_sheet([cab,...rows],{cellDates:true,dateNF:"dd/mm/yyyy"});ws["!cols"]=w.map(x=>({wch:x}));if(rows.length)ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:cab.length-1}})};X.utils.book_append_sheet(wb,ws,nome)};
-  add("Certificados pendentes",["FICHA","NF","FORNECEDOR","DATA RECEBIMENTO","ITEM","DESCRIÇÃO","TAG","UND","QTD","MATERIAL CRÍTICO","COBRADO"],cert,[8,12,34,14,6,60,16,7,8,22,9]);
-  add("Informações faltando",["FICHA","DOCUMENTO","FORNECEDOR","INFORMAÇÃO","ITEM"],falta,[8,22,34,22,6]);
-  add("Preenchidas automaticamente",["FICHA","DOCUMENTO","INFORMAÇÃO","ITEM","VALOR PREENCHIDO","REGRA"],auto,[8,22,22,6,24,60]);
-  add("Números sem ficha",["Nº","OBSERVAÇÃO"],lac,[8,40]);
-  baixarXlsx(wb,`Nexum - Pendências - ${CT().nome} - ${A.hoje()}.xlsx`);
+  const cert=fichas.flatMap(f=>A.itensValidos(f).map(i=>({f,i,n:f.itens.indexOf(i)})).filter(x=>A.certSituacao(x.f,x.i)==="pendente")).sort((a,b)=>a.f.numero-b.f.numero||a.n-b.n)
+    .map(x=>[x.f.numero,x.f.nf,x.f.fornecedor,dataXL(x.f.dataRecebimento),x.n+1,x.i.descricao,x.i.tag,x.i.und,numQ(x.i.qtd),(A.materialCritico(x.i.descricao,x.i.tag)||{}).rotulo||"","Pendente – Certificado",(x.f.cobrancas||[]).length?"Sim":"Não"]);
+  const all=itensPend(),lin=p=>p.item!==undefined?p.item+1:"",docF=f=>f.tipo==="ROM"?"Romaneio "+(f.romaneio||"—"):"NF "+(f.nf||"—");
+  const desc=x=>x.p.item!==undefined?(x.f.itens[x.p.item]?.descricao||x.f.itens[x.p.item]?.tag||""):"";
+  const falta=all.filter(x=>x.p.tipo==="falta"&&x.p.campo!=="lacuna").sort((a,b)=>a.f.numero-b.f.numero).map(x=>[x.f.numero,docF(x.f),x.f.fornecedor,A.STATUS[x.f.status]?.rotulo||"",NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p),desc(x),"Faltando"]);
+  const auto=all.filter(x=>x.p.tipo==="auto").sort((a,b)=>a.f.numero-b.f.numero).map(x=>[x.f.numero,docF(x.f),NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p),desc(x),x.p.campo==="dataRecebimento"?dataXL(x.p.valor):x.p.campo==="status"?(A.STATUS[x.p.valor]?.rotulo||x.p.valor):x.p.valor,x.p.regra,"Preenchido automaticamente"]);
+  const lac=lacs.slice().sort((a,b)=>a.numero-b.numero).map(f=>[f.numero,"Número pulado na sequência do mapa","Lançar a ficha ou marcar como cancelado no Nexum","Pendente"]);
+  const info=infoXL();
+  const resumo=[["Certificados pendentes",cert.length,"Itens de material crítico (CMC) recebidos sem certificado","Anexar o certificado na aba Certificados (PC) ou em Certificados pendentes (celular)"],
+    ["Informações faltando",falta.length,"Dados que não dá para deduzir dos outros registros","Completar na ficha"],
+    ["Preenchidas automaticamente",auto.length,"Informações completadas pelo Nexum a partir de outros registros","Revisar e confirmar na aba Pendências"],
+    ["Números sem ficha",lac.length,"Números pulados na sequência do mapa","Lançar a ficha ou marcar como cancelado"]];
+  const sub=`PENDÊNCIAS · ${CT().projeto}`;
+  xl(`Nexum - Pendencias - ${CT().nome} - ${A.hoje()}.xlsx`,[
+    {nome:"Resumo",titulo:"RELATÓRIO DE PENDÊNCIAS",subtitulo:sub,info,kpis:[["Certificados pendentes",cert.length,"warn"],["Informações faltando",falta.length,"warn"],["Preenchidas automaticamente",auto.length,"prog"],["Números sem ficha",lac.length,"crit"]],
+      cols:[{h:"PENDÊNCIA",w:30,forte:true},{h:"QUANTIDADE",w:14,tipo:"num"},{h:"O QUE É",w:58},{h:"O QUE FAZER",w:62}],linhas:resumo},
+    {nome:"Certificados pendentes",titulo:"CERTIFICADOS PENDENTES",subtitulo:sub,info,
+      cols:[{h:"FICHA",w:8,tipo:"int",forte:true},{h:"NF",w:12,al:"center"},{h:"FORNECEDOR",w:32},{h:"DATA RECEBIMENTO",w:13,tipo:"data"},{h:"ITEM",w:6,tipo:"int"},{h:"DESCRIÇÃO",w:52},{h:"TAG",w:16},{h:"UND",w:7,al:"center"},{h:"QTD",w:9,tipo:"num"},{h:"MATERIAL CRÍTICO (CMC)",w:22},{h:"SITUAÇÃO",w:22,tipo:"cor"},{h:"COBRADO",w:10,tipo:"cor"}],linhas:cert,vazio:"Nenhum certificado pendente."},
+    {nome:"Informações faltando",titulo:"INFORMAÇÕES FALTANDO",subtitulo:sub,info,
+      cols:[{h:"FICHA",w:8,tipo:"int",forte:true},{h:"DOCUMENTO",w:22},{h:"FORNECEDOR",w:32},{h:"STATUS DA FICHA",w:18,tipo:"cor"},{h:"INFORMAÇÃO",w:22,forte:true},{h:"ITEM",w:6,tipo:"int"},{h:"DESCRIÇÃO DO ITEM",w:46},{h:"SITUAÇÃO",w:13,tipo:"cor"}],linhas:falta,vazio:"Nenhuma informação faltando."},
+    {nome:"Preenchidas automaticamente",titulo:"INFORMAÇÕES PREENCHIDAS AUTOMATICAMENTE",subtitulo:sub,info,
+      cols:[{h:"FICHA",w:8,tipo:"int",forte:true},{h:"DOCUMENTO",w:22},{h:"INFORMAÇÃO",w:20,forte:true},{h:"ITEM",w:6,tipo:"int"},{h:"DESCRIÇÃO DO ITEM",w:42},{h:"VALOR PREENCHIDO",w:18,al:"center",tipo:""},{h:"REGRA USADA",w:46},{h:"SITUAÇÃO",w:24,tipo:"cor"}],linhas:auto.map(r=>{if(r[5] instanceof Date)return r;return r}),vazio:"Nenhum preenchimento automático a revisar."},
+    {nome:"Números sem ficha",titulo:"NÚMEROS SEM FICHA",subtitulo:sub,info,
+      cols:[{h:"Nº",w:10,tipo:"int",forte:true},{h:"OBSERVAÇÃO",w:40},{h:"O QUE FAZER",w:48},{h:"SITUAÇÃO",w:14,tipo:"cor"}],linhas:lac,vazio:"Nenhum número pulado."}
+  ],$("relPend"));
 };
 $("relResumo").onclick=()=>{
-  const X=window.XLSX,wb=X.utils.book_new();
-  const rows=fichas.slice().sort((a,b)=>a.numero-b.numero).map(f=>[f.numero,f.tipo==="ROM"?"Romaneio Anglo":"Nota fiscal",f.tipo==="ROM"?f.romaneio:f.nf,f.fornecedor,f.fornecimento,dataXL(f.dataRecebimento),A.itensValidos(f).length,A.STATUS[f.status]?.rotulo||"",A.CONFER[A.conf(f).situacao],A.pendencias(f).join(", "),NXIMP.faltantes(f).filter(x=>x.tipo==="falta").length,(f.auto||[]).length,f.origem==="importacao"?"Mapa FP-11":f.origem==="campo"?"Campo":"Escritório"]);
-  const cab=["FICHA","TIPO","DOCUMENTO","FORNECEDOR","FORNECIMENTO","DATA RECEBIMENTO","ITENS","STATUS","CONFERÊNCIA","PENDÊNCIAS","INFORMAÇÕES FALTANDO","PREENCHIDAS AUTOMATICAMENTE","ORIGEM"];
-  const ws=X.utils.aoa_to_sheet([cab,...rows],{cellDates:true,dateNF:"dd/mm/yyyy"});ws["!cols"]=[8,14,18,36,20,14,7,18,16,30,10,12,12].map(x=>({wch:x}));ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:cab.length-1}})};
-  X.utils.book_append_sheet(wb,ws,"Resumo das fichas");baixarXlsx(wb,`Nexum - Resumo das fichas - ${CT().nome} - ${A.hoje()}.xlsx`);
+  const l=fichas.slice().sort((a,b)=>a.numero-b.numero);
+  const rows=l.map(f=>[f.numero,f.tipo==="ROM"?"Romaneio Anglo":"Nota fiscal",f.tipo==="ROM"?f.romaneio:f.nf,f.fornecedor,f.fornecimento,dataXL(f.dataRecebimento),A.itensValidos(f).length,A.STATUS[f.status]?.rotulo||"",A.CONFER[A.conf(f).situacao],A.pendencias(f).join(", "),NXIMP.faltantes(f).filter(x=>x.tipo==="falta").length,(f.auto||[]).length,f.origem==="importacao"?"Mapa FP-11":f.origem==="campo"?"Campo":"Escritório"]);
+  const comPend=l.filter(f=>A.pendencias(f).length||NXIMP.faltantes(f).some(x=>x.tipo==="falta")).length;
+  xl(`Nexum - Resumo das fichas - ${CT().nome} - ${A.hoje()}.xlsx`,[{nome:"Resumo das fichas",titulo:"RESUMO DAS FICHAS DE RECEBIMENTO",subtitulo:`${A.DOC_FICHA} · ${CT().projeto}`,info:infoXL(),congelarCol:1,
+    kpis:[["Fichas",l.length],["Notas fiscais",l.filter(f=>f.tipo==="NF").length],["Romaneios Anglo",l.filter(f=>f.tipo==="ROM").length],["Finalizadas",l.filter(f=>f.status==="finalizado").length,"ok"],["Com pendência",comPend,"warn"]],
+    cols:[{h:"FICHA",w:8,tipo:"int",forte:true},{h:"TIPO",w:15},{h:"DOCUMENTO",w:18,al:"center"},{h:"FORNECEDOR",w:34},{h:"FORNECIMENTO",w:20},{h:"DATA RECEBIMENTO",w:13,tipo:"data"},{h:"ITENS",w:8,tipo:"int"},{h:"STATUS",w:18,tipo:"cor"},{h:"CONFERÊNCIA",w:15,tipo:"cor"},{h:"PENDÊNCIAS",w:28,tipo:"cor"},{h:"INFORMAÇÕES FALTANDO",w:13,tipo:"int"},{h:"PREENCH. AUTOMÁTICO",w:15,tipo:"int"},{h:"ORIGEM",w:13,al:"center"}],linhas:rows}],$("relResumo"));
 };
 
 /* ---------- Importação do histórico (FP-11) ---------- */
