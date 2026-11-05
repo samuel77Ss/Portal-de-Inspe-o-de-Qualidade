@@ -212,7 +212,7 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
       <div class="sec-h"><h2 style="color:var(--bad)">Devolvidas para correção</h2><span class="cnt" id="devolN"></span></div>
       <div class="list" id="devolvidas"></div>
     </div>
-    <div class="sec-h"><h2>Lançamentos recentes</h2><span class="cnt" id="recN"></span></div>
+    <div class="sec-h"><h2>Recebimentos de hoje</h2><span class="cnt" id="recN"></span></div>
     <div class="lista-g" id="recentes"></div>
   </section>
 
@@ -341,7 +341,10 @@ $("btnInicio").onclick=()=>show("inicio");
 
 /* lista */
 function motivosTxt(c){return (c.motivos||[]).map(m=>A.MOTIVOS[m]||m).join(" · ")}
+const diaLocal=iso=>{if(!iso)return "";const d=new Date(iso);return isNaN(d)?"":`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const deHoje=f=>{const h=A.hoje();return diaLocal(f.criadoEm)===h||f.dataRecebimento===h};
 function renderDevolvidas(){
+  $("devolBox").hidden=true;return; /* devoluções ficam com o escritório: nada volta para o inspetor */
   const d=fichas.filter(f=>A.conf(f).situacao==="devolvida").sort((a,b)=>a.numero-b.numero);
   $("devolBox").hidden=!d.length;$("devolN").textContent=d.length;
   $("devolvidas").innerHTML=d.map(f=>NXUI.fichaCard(A,f,{attrs:`data-ed="${f.id}"`,motivo:motivosTxt(A.conf(f))||"Devolvida para correção"})).join("");
@@ -351,10 +354,9 @@ function renderResumo(){
   const h=new Date(),hoje=A.hoje();
   const hr=h.getHours();$("helloT").textContent=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite";
   $("helloData").textContent=h.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
-  const nHoje=fichas.filter(f=>(f.criadoEm||"").slice(0,10)===hoje||f.dataRecebimento===hoje).length;
-  const nDev=fichas.filter(f=>A.conf(f).situacao==="devolvida").length;
+  const lh=fichas.filter(deHoje),nHoje=lh.length,nIt=lh.reduce((s,f)=>s+A.itensValidos(f).length,0);
   const nCert=fichas.filter(f=>f.tipo==="NF"&&f.status!=="finalizado").reduce((s,f)=>s+A.semCertificado(f).length,0);
-  $("resumo").innerHTML=[["a","truck",nHoje,"Recebidos hoje"],["b","undo",nDev,"Para corrigir"],["c","cert",nCert,"Certificados pendentes"]]
+  $("resumo").innerHTML=[["a","truck",nHoje,nHoje===1?"Ficha hoje":"Fichas hoje"],["a","box",nIt,nIt===1?"Item hoje":"Itens hoje"],["c","cert",nCert,"Certificados pendentes"]]
     .map(([c,i,n,t])=>c==="c"?`<button type="button" class="rs c clic" id="rsCert"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t} ›</small></button>`:`<div class="rs ${c}"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t}</small></div>`).join("");
   $("rsCert").onclick=()=>show("cert");
 }
@@ -384,11 +386,11 @@ function renderPendCert(){
 }
 function renderRecentes(){
   renderDevolvidas();renderResumo();
-  const rs=fichas.slice().sort((a,b)=>(b.atualizadoEm||"").localeCompare(a.atualizadoEm||"")).slice(0,15);
+  const rs=fichas.filter(deHoje).sort((a,b)=>(b.atualizadoEm||"").localeCompare(a.atualizadoEm||""));
   $("recN").textContent=rs.length||"";
   $("recentes").className=rs.length?"lista-g":"";
-  $("recentes").innerHTML=rs.length?rs.map(f=>NXUI.fichaCard(A,f,{attrs:`data-ver="${f.id}"`})).join(""):`<div class="empty"><strong>Nenhum lançamento ainda</strong>Toque em Nota fiscal ou Romaneio para registrar o primeiro recebimento.</div>`;
-  $("recentes").querySelectorAll("[data-ver]").forEach(b=>b.onclick=()=>{const f=fichas.find(x=>x.id===b.dataset.ver);if(A.conf(f).situacao==="devolvida")abrirEdicao(f);else toast(`Ficha ${f.numero}: ${A.STATUS[f.status].rotulo}${A.conf(f).situacao==="aprovada"?" · conferida pelo escritório":" · aguardando conferência do escritório"}`)});
+  $("recentes").innerHTML=rs.length?rs.map(f=>NXUI.fichaCard(A,f,{attrs:`data-ver="${f.id}"`})).join(""):`<div class="empty"><strong>Nenhum recebimento hoje</strong>Toque em Nota fiscal ou Romaneio para começar. A lista recomeça todo dia; os lançamentos anteriores ficam guardados no escritório.</div>`;
+  $("recentes").querySelectorAll("[data-ver]").forEach(b=>b.onclick=()=>{const f=fichas.find(x=>x.id===b.dataset.ver);toast(`Ficha ${f.numero}: ${A.STATUS[f.status].rotulo}${A.conf(f).situacao==="aprovada"?" · conferida pelo escritório":" · enviada ao escritório"}`)});
   const fs=[...new Set(fichas.filter(f=>f.tipo==="NF").map(f=>A.norm(f.fornecedor)).filter(Boolean))].sort();
   $("listaForn").innerHTML=fs.map(x=>`<option value="${esc(x)}">`).join("");
 }
@@ -693,6 +695,8 @@ $("badgeDemo").hidden=A.store.modo!=="exemplo";
 let viuSplash=false;try{viuSplash=sessionStorage.getItem("nx_splash")==="1"}catch(e){}
 $("splash").hidden=viuSplash;
 $("btnAcessar").onclick=()=>{$("splash").hidden=true;try{sessionStorage.setItem("nx_splash","1")}catch(e){}};
+let diaAtual=A.hoje();setInterval(()=>{if(A.hoje()!==diaAtual){diaAtual=A.hoje();renderRecentes()}},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&A.hoje()!==diaAtual){diaAtual=A.hoje();renderRecentes()}});
 A.store.ouvir(l=>{fichas=l.filter(f=>A.ctrDe(f)==="recleaner"&&!f.lacuna);renderRecentes();if(view==="cert")renderPendCert();if(view==="lancar")checarDup()});
 show("inicio");
 })();

@@ -578,7 +578,7 @@ function renderPainel(){
   const aConf=fichas.filter(f=>f.status!=="sem_acao"&&f.status!=="finalizado"&&A.conf(f).situacao==="pendente");
   const devol=fichas.filter(f=>A.conf(f).situacao==="devolvida");
   const ord=l=>l.sort((a,b)=>(a.dataRecebimento||"").localeCompare(b.dataRecebimento||""));
-  $("cols").innerHTML=col("A conferir",ord(aConf))+col("Devolvidas ao campo",ord(devol))+col("Sem ação",ord(fichas.filter(f=>f.status==="sem_acao")))+col("Certificado pendente",ord(fichas.filter(f=>f.status==="cert_pendente")));
+  $("cols").innerHTML=col("A conferir",ord(aConf))+col("Com informação faltando",ord(fichas.filter(f=>f.status!=="finalizado"&&NXIMP.faltantes(f).some(x=>x.tipo==="falta"))))+col("Sem ação",ord(fichas.filter(f=>f.status==="sem_acao")))+col("Certificado pendente",ord(fichas.filter(f=>f.status==="cert_pendente")));
   bind($("cols"));
 }
 
@@ -792,7 +792,7 @@ function renderConf(){
   const c=A.conf(ed);
   $("dConf").className="pill "+(c.situacao==="aprovada"?"finalizado":c.situacao==="devolvida"?"bad":"em_andamento");
   $("dConf").textContent=A.CONFER[c.situacao];
-  $("btnAprovar").hidden=c.situacao==="aprovada";$("btnDevolver").hidden=c.situacao==="devolvida";
+  $("btnAprovar").hidden=c.situacao==="aprovada";$("btnDevolver").hidden=true;/* nada volta para o campo: o escritório corrige */
   $("dDevolInfo").hidden=c.situacao!=="devolvida";
   if(c.situacao==="devolvida")$("dDevolInfo").innerHTML=`<strong>Aguardando correção do campo.</strong> ${(c.motivos||[]).map(m=>esc(A.MOTIVOS[m]||m)).join(" · ")}${(c.itens||[]).length?` · itens ${c.itens.map(i=>i+1).join(", ")}`:""}${c.comentario?`<br>“${esc(c.comentario)}”`:""}`;
   const h=(c.historico||[]).slice().reverse();
