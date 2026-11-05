@@ -187,6 +187,23 @@ td.ck input{width:18px;height:18px;min-height:0}
           <div style="display:flex;gap:8px"><input id="fichaIni" type="number" min="1" inputmode="numeric" style="max-width:160px"><button class="btn" type="button" id="btnFichaIni">Salvar</button></div>
           <span class="code" id="proxFicha"></span>
         </div>
+        <div class="box" id="dlCfg">
+          <h4>Planilha de Diligenciamento</h4>
+          <p class="hint">Conecte a pasta <b>RELATORIO DILIGENCIAMENTO</b> sincronizada pelo OneDrive neste computador. O app confere a cada 3 minutos se chegou uma planilha nova e passa a usar a mais recente.</p>
+          <div class="notice" id="dlPastaSt">Nenhuma pasta conectada.</div>
+          <div class="actions" style="justify-content:flex-start">
+            <button class="btn primary small" type="button" id="btnDlConectar">Conectar pasta</button>
+            <button class="btn small" type="button" id="btnDlReativar" hidden>Reativar acesso à pasta</button>
+            <button class="btn small" type="button" id="btnDlVerificar" hidden>Verificar agora</button>
+            <button class="btn ghost small" type="button" id="btnDlDesc" hidden>Desconectar</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="dlTeste" hidden>
+            <input id="dlTNf" placeholder="Nº da NF" inputmode="numeric" style="flex:0 1 130px">
+            <input id="dlTForn" placeholder="Fornecedor (opcional)" style="flex:1 1 180px">
+            <button class="btn small" type="button" id="btnDlTestar">Testar busca</button>
+          </div>
+          <div class="hint" id="dlTRes"></div>
+        </div>
         <div class="box">
           <h4>Materiais críticos (CMC)</h4>
           <p class="hint">Itens de NF que se encaixam nestes grupos exigem certificado de qualidade. O inspetor ou a Qualidade podem marcar ou desmarcar item a item.</p>
@@ -305,8 +322,10 @@ td.ck input{width:18px;height:18px;min-height:0}
 <div class="lightbox" id="lb" hidden><button class="btn onhead small close" type="button" id="lbClose">Fechar</button><img id="lbImg" alt="Documento ampliado"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="assets/vendor/xlsx.mini.min.js"></script>
 <script src="assets/exemplo-docs.js"></script>
 <script src="assets/dados.js"></script>
+<script src="assets/diligenciamento.js"></script>
 <script>
 (function(){
 const A=window.AMR,$=id=>document.getElementById(id);
@@ -568,6 +587,33 @@ $("btnSalvForn").onclick=async()=>{try{await A.cadastros.salvarFornecedor({id:fo
 $("btnExcForn").onclick=async()=>{const b=$("btnExcForn");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Toque de novo";return}await A.cadastros.excluirFornecedor(foEd.id);$("fornForm").hidden=true;toast("Fornecedor excluído")};
 $("qForn").oninput=renderCad;
 $("btnFichaIni").onclick=async()=>{await A.cadastros.salvarFichaInicial($("fichaIni").value);toast("Numeração salva")};
+
+/* ponte da planilha de Diligenciamento pela pasta do OneDrive */
+const DL=window.DILIG;
+function dlPastaUI(estado,msg,cls){
+  const st=$("dlPastaSt");st.className="notice"+(cls?" "+cls:"");
+  const f=DL.fonteAtual(),ver=DL.pasta.ultimaVerificacao();
+  st.innerHTML=msg||(f&&f.tipo==="pasta"?`<b>Conectada:</b> pasta ${esc(DL.pasta.nome())} · <b>${esc(f.nome)}</b> · modificada em ${new Date(f.modificado).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})} · ${f.total.toLocaleString("pt-BR")} linhas${ver?` · verificada às ${new Date(ver).toLocaleTimeString("pt-BR",{timeStyle:"short"})}`:""}`:"Nenhuma pasta conectada.");
+  if(!msg&&f&&f.tipo==="pasta")st.style.cssText="background:var(--ok-bg);color:var(--ok)";else st.style.cssText="";
+  $("btnDlConectar").hidden=estado==="ativa";$("btnDlReativar").hidden=estado!=="precisa_permissao";
+  $("btnDlVerificar").hidden=$("btnDlDesc").hidden=estado!=="ativa";$("dlTeste").hidden=estado!=="ativa";
+}
+let dlEstado="nenhuma";
+if(!DL.pasta.suportada()){dlPastaUI("nenhuma","Para conectar a pasta, abra o app do escritório no <b>Chrome</b> ou no <b>Edge</b> do computador.");$("btnDlConectar").disabled=true}
+else{
+  DL.pasta.ouvir(ev=>{if(ev.tipo==="lendo")dlPastaUI(dlEstado,`Lendo ${esc(ev.nome)}… pode levar alguns segundos.`);else if(ev.tipo==="vazia")dlPastaUI(dlEstado,"A pasta conectada não tem planilha .xlsx. Confira se é a pasta RELATORIO DILIGENCIAMENTO.","bad");else if(ev.tipo==="erro")dlPastaUI(dlEstado,"Não consegui ler a pasta. Toque em Reativar acesso à pasta.","bad");else dlPastaUI(dlEstado)});
+  DL.pasta.retomar().then(e=>{dlEstado=e;dlPastaUI(e,e==="precisa_permissao"?"A pasta está conectada, mas o navegador pede para confirmar o acesso. Toque em <b>Reativar acesso à pasta</b>.":null)}).catch(()=>dlPastaUI("nenhuma"));
+}
+$("btnDlConectar").onclick=async()=>{try{await DL.pasta.conectar();dlEstado="ativa";dlPastaUI("ativa");toast("Pasta conectada")}catch(e){if(e&&e.name!=="AbortError")dlPastaUI(dlEstado,"Não consegui ler a planilha: "+esc(e.message||e),"bad")}};
+$("btnDlReativar").onclick=async()=>{try{if(await DL.pasta.reativar()){dlEstado="ativa";dlPastaUI("ativa")}}catch(e){dlPastaUI(dlEstado,"Não consegui ler a pasta: "+esc(e.message||e),"bad")}};
+$("btnDlVerificar").onclick=async()=>{const m=await DL.pasta.verificarAgora().catch(()=>null);dlPastaUI("ativa");toast(m?"Planilha nova carregada":"Sem planilha nova")};
+$("btnDlDesc").onclick=async()=>{await DL.pasta.desconectar();dlEstado="nenhuma";dlPastaUI("nenhuma");$("dlTRes").textContent=""};
+$("btnDlTestar").onclick=async()=>{
+  const nf=$("dlTNf").value.trim();if(!nf){$("dlTNf").focus();return}
+  try{const r=await DL.buscar({nf,fornecedor:$("dlTForn").value.trim()});
+    $("dlTRes").innerHTML=r.situacao==="encontrada"?`✓ <b>${r.itens.length} itens</b> da NF ${esc(nf)} · ${esc(r.fornecedor.nomeForn)} · PC ${esc(r.itens[0].pc)}`:r.situacao==="varios_fornecedores"?`A NF ${esc(nf)} aparece para ${r.opcoes.length} fornecedores: ${r.opcoes.map(o=>esc(o.nomeForn)).join("; ")}. Informe o fornecedor.`:r.situacao==="pendentes_fornecedor"?`NF ainda sem pré-nota. ${r.itens.length} itens pendentes de ${esc(r.fornecedor.nomeForn)}.`:`NF ${esc(nf)} não encontrada na planilha.`}
+  catch(e){$("dlTRes").textContent="Erro: "+(e.message||e)}
+};
 
 function renderTudo(){renderPainel();renderLista();renderMapa();renderCad();if(ed)avisos()}
 $("badgeDemo").hidden=A.store.modo!=="exemplo";

@@ -146,11 +146,70 @@
     fonte = { tipo: "sharepoint", nome: meta.name, modificado: meta.lastModifiedDateTime, eTag: meta.eTag, ...idx };
     return { ...fonte, aviso, recarregada: true };
   }
-  async function carregarArquivoLocal(file) {
+  async function carregarArquivoLocal(file, tipo) {
     const idx = indexar(await file.arrayBuffer());
-    fonte = { tipo: "local", nome: file.name, modificado: file.lastModified ? new Date(file.lastModified).toISOString() : "", ...idx };
+    fonte = { tipo: tipo || "local", nome: file.name, modificado: file.lastModified ? new Date(file.lastModified).toISOString() : "", ...idx };
     return fonte;
   }
+
+  /* ---------- Ponte pelo PC do escritório: pasta sincronizada pelo OneDrive ----------
+     O navegador (Chrome/Edge no computador) guarda o acesso à pasta e confere de tempos em tempos
+     se apareceu uma planilha mais nova. Nada é lido sem a pessoa escolher a pasta. */
+  const IDB = { db: null,
+    abrir() { return this.db || (this.db = new Promise((ok, err) => { const r = indexedDB.open("amr_dilig", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => err(r.error); })); },
+    async get(k) { const db = await this.abrir(); return new Promise(ok => { const t = db.transaction("kv").objectStore("kv").get(k); t.onsuccess = () => ok(t.result); t.onerror = () => ok(undefined); }); },
+    async set(k, v) { const db = await this.abrir(); return new Promise(ok => { try { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => ok(); t.onerror = () => ok(); } catch (e) { ok(); } }); },
+    async del(k) { const db = await this.abrir(); return new Promise(ok => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = () => ok(); }); }
+  };
+  const pastaSuportada = () => typeof window.showDirectoryPicker === "function";
+  let pasta = null, ultimaVerif = null, timer = null, ouvintesPasta = new Set();
+  function avisarPasta(ev) { ouvintesPasta.forEach(fn => { try { fn(ev); } catch (e) { } }); }
+  async function arquivoMaisRecente(dir) {
+    let melhor = null;
+    for await (const h of dir.values()) {
+      if (h.kind !== "file" || !/\.xlsx?$/i.test(h.name) || /^~\$/.test(h.name)) continue;
+      const f = await h.getFile();
+      const pref = CFG.padraoArquivo.test(h.name) ? 1 : 0;
+      if (!melhor || pref > melhor.pref || (pref === melhor.pref && f.lastModified > melhor.f.lastModified)) melhor = { f, pref };
+    }
+    return melhor && melhor.f;
+  }
+  async function verificarPasta(forcar) {
+    if (!pasta) return null;
+    const f = await arquivoMaisRecente(pasta);
+    ultimaVerif = new Date().toISOString();
+    if (!f) { avisarPasta({ tipo: "vazia" }); return null; }
+    const mudou = forcar || !fonte || fonte.tipo !== "pasta" || fonte.nome !== f.name || +new Date(fonte.modificado) !== f.lastModified;
+    if (mudou) { avisarPasta({ tipo: "lendo", nome: f.name }); await carregarArquivoLocal(f, "pasta"); avisarPasta({ tipo: "atualizada" }); }
+    else avisarPasta({ tipo: "sem_mudanca" });
+    return mudou;
+  }
+  function vigiar() { clearInterval(timer); timer = setInterval(() => verificarPasta().catch(e => avisarPasta({ tipo: "erro", erro: e })), 3 * 60 * 1000);
+    window.addEventListener("focus", () => verificarPasta().catch(() => { })); }
+  const pastaApi = {
+    suportada: pastaSuportada,
+    ouvir(fn) { ouvintesPasta.add(fn); return () => ouvintesPasta.delete(fn); },
+    async conectar() {
+      const dir = await window.showDirectoryPicker({ id: "amr-dilig", mode: "read" });
+      pasta = dir; await IDB.set("pasta", dir); vigiar();
+      return verificarPasta(true);
+    },
+    /* Ao abrir o app: devolve "ativa", "precisa_permissao" ou "nenhuma" */
+    async retomar() {
+      if (!pastaSuportada()) return "nenhuma";
+      const dir = await IDB.get("pasta").catch(() => null);
+      if (!dir) return "nenhuma";
+      pasta = dir;
+      const p = await dir.queryPermission({ mode: "read" }).catch(() => "denied");
+      if (p === "granted") { vigiar(); await verificarPasta(true); return "ativa"; }
+      return "precisa_permissao";
+    },
+    async reativar() { if (!pasta) return false; const p = await pasta.requestPermission({ mode: "read" }); if (p !== "granted") return false; vigiar(); await verificarPasta(true); return true; },
+    async desconectar() { clearInterval(timer); pasta = null; await IDB.del("pasta"); },
+    nome: () => pasta ? pasta.name : "",
+    ultimaVerificacao: () => ultimaVerif,
+    verificarAgora: () => verificarPasta(false)
+  };
   async function obterFonte() {
     if (configurado()) return atualizarDoSharePoint();
     if (fonte) return fonte;
@@ -198,7 +257,7 @@
   async function itensNFFornecedor(nf, codForn) { const f = await obterFonte(); return ordenar(f.registros.filter(r => r.nf === nfNum(nf) && r.codForn === codForn)); }
   const ordenar = l => l.slice().sort((a, b) => (a.pc + a.itemPc).localeCompare(b.pc + b.itemPc));
 
-  window.DILIG = { CFG, configurado, buscar, carregarArquivoLocal, pendentesDoFornecedor, itensNFFornecedor, familia, indexar,
+  window.DILIG = { pasta: pastaApi, CFG, configurado, buscar, carregarArquivoLocal, pendentesDoFornecedor, itensNFFornecedor, familia, indexar,
     fonteAtual: () => fonte ? { tipo: fonte.tipo, nome: fonte.nome, modificado: fonte.modificado, total: fonte.registros.length } : null,
     contaAtual: () => conta ? (conta.name || conta.username) : "", iniciarMsal: () => configurado() ? iniciarMsal() : Promise.resolve(null) };
 })();
