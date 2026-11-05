@@ -127,6 +127,77 @@ td.ck input{width:18px;height:18px;min-height:0}
 
 .marca{display:flex;align-items:center;gap:12px;min-width:0}
 .marca .nx-mark{width:40px}
+.dash-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.dash-t{margin:0;font:700 1.35rem var(--f-display);letter-spacing:-.02em;color:var(--ink)}
+.dash-sub{font-size:.78rem;color:var(--muted)}
+.seg.per button{min-height:36px;padding:6px 14px;border-radius:999px;font-weight:600;font-size:.8rem}
+.seg.per button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.notice.demo{background:var(--wait-bg);color:var(--wait);margin-bottom:12px;display:flex;gap:8px;align-items:center}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:620px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);display:grid;gap:8px;text-align:left;font:inherit;color:inherit}
+.kp-h{display:flex;align-items:center;gap:10px;font-size:.76rem;font-weight:600;color:var(--muted)}
+.kp-i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--wait-bg);color:var(--wait)}
+.kp-i .ico{width:18px;height:18px}
+.kp b{font:700 1.85rem var(--f-display);letter-spacing:-.02em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.kp b small{font-size:.9rem;font-weight:600;color:var(--muted);margin-left:2px}
+.kp em{font-style:normal;font-size:.74rem;color:var(--muted)}
+.kp.w .kp-i{background:var(--warn-bg);color:var(--warn)} .kp.g .kp-i{background:var(--ok-bg);color:var(--ok)}
+.dgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+@media (max-width:1000px){.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.dgrid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.panel.span2{grid-column:span 2}
+@media (max-width:700px){.panel.span2{grid-column:auto}}
+.ph{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.ph h3{margin:0;font:700 .92rem var(--f-display);color:var(--ink)}
+.ph-s{font-size:.74rem;color:var(--muted)}
+.viz{--c1:#2a78d6;--o1:#86b6ef;--o2:#3987e5;--o3:#1c5cab;--o4:#0d366b;--s-ok:#0ca30c;--s-prog:#2a78d6;--s-warn:#c98500;--s-crit:#d03b3b;--grid:#e3e9f1;--axis:#6b7684}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .viz{--c1:#3987e5;--o1:#256abf;--o2:#3987e5;--o3:#6da7ec;--o4:#b7d3f6;--s-prog:#3987e5;--grid:#1d3a62;--axis:#9fb0c6}}
+:root[data-theme="dark"] .viz{--c1:#3987e5;--o1:#256abf;--o2:#3987e5;--o3:#6da7ec;--o4:#b7d3f6;--s-prog:#3987e5;--grid:#1d3a62;--axis:#9fb0c6}
+.ch-svg{width:100%;height:auto;display:block}
+.ch-grid{stroke:var(--grid);stroke-width:1}
+.ch-base{stroke:var(--axis);stroke-width:1;opacity:.6}
+.ch-ax{fill:var(--axis);font:500 10.5px var(--f-body)}
+.ch-val{fill:var(--ink);font:700 11px var(--f-body)}
+.ch-bar{fill:var(--c1);opacity:.55}
+.ch-bar.ult{opacity:1}
+.ch-vazio{color:var(--muted);font-size:.84rem;padding:28px 0;text-align:center}
+.bl{display:grid;gap:9px}
+.bl-r{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:.8rem}
+.bl-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.bl-t{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+.bl-t i{display:block;height:100%;background:var(--c1);border-radius:5px}
+.bl-t i.o1{background:var(--o1)} .bl-t i.o2{background:var(--o2)} .bl-t i.o3{background:var(--o3)} .bl-t i.o4{background:var(--o4)}
+.bl-r b{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.stk{display:flex;gap:2px;height:16px;border-radius:6px;overflow:hidden;margin-bottom:14px}
+.stk i{display:block;min-width:4px}
+.stk .ok,.lg-s.ok{background:var(--s-ok)} .stk .prog,.lg-s.prog{background:var(--s-prog)} .stk .warn,.lg-s.warn{background:var(--s-warn)} .stk .crit,.lg-s.crit{background:var(--s-crit)}
+.lg{display:grid;gap:8px}
+.lg-r{display:grid;grid-template-columns:10px 16px 1fr auto 40px;gap:8px;align-items:center;font-size:.8rem;color:var(--ink)}
+.lg-s{width:10px;height:10px;border-radius:3px}
+.lg-r .ico{color:var(--muted)}
+.lg-r b{font-variant-numeric:tabular-nums}
+.lg-p{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.ch-tip{position:fixed;z-index:95;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.78rem;line-height:1.4;padding:7px 10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.2);max-width:260px}
+.col h3{margin:0 0 10px;font:700 .82rem var(--f-body);color:var(--ink);display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0}
+.col h3 .cnt{font:700 .7rem var(--f-body);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:1px 8px}
+.col .list{display:grid;gap:8px}
+.col{background:color-mix(in srgb,var(--surface-2) 55%,transparent);border-radius:16px;padding:12px;min-width:0}
+.col .fc{flex-direction:column-reverse;gap:8px;padding:12px 14px;min-width:0}
+.col .fc-r{justify-items:start}
+.col .fc-l{width:100%}
+.tbl-f{border-radius:14px;box-shadow:var(--shadow)}
+table.ft{border-collapse:collapse;width:100%;min-width:900px;font-size:.84rem}
+table.ft th{background:var(--surface-2);color:var(--muted);font:700 .7rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:10px 12px;white-space:nowrap}
+table.ft td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:middle}
+table.ft tbody tr{cursor:pointer}
+table.ft tbody tr:hover td{background:var(--surface-2)}
+table.ft .n{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+table.ft .s{color:var(--muted);font-size:.78rem}
+table.ft .al{display:flex;gap:10px;flex-wrap:wrap;font-size:.76rem;font-weight:600}
+table.ft .al span{display:inline-flex;gap:4px;align-items:center}
 /* cadastros */
 .cad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:start}
 @media (max-width:860px){.cad{grid-template-columns:1fr}}
@@ -158,9 +229,20 @@ td.ck input{width:18px;height:18px;min-height:0}
 
 <main class="wrap">
   <section id="v-painel">
+    <div class="dash-top">
+      <div><h2 class="dash-t">Visão geral</h2><span class="dash-sub" id="dashSub"></span></div>
+      <div class="seg per" id="per" role="group" aria-label="Período"></div>
+    </div>
+    <div class="notice demo" id="dashDemo" hidden></div>
     <div class="kpis" id="kpis"></div>
-    <div class="flow"><span>Fluxo:</span><span class="pill sem_acao">Sem ação</span><i>→</i><span class="pill em_andamento">Em andamento</span><i>→</i><span class="pill cert_pendente">Certificado pendente</span><i>→</i><span class="pill finalizado">Finalizado</span></div>
-    <h2 class="sec">O que precisa de atenção</h2>
+    <div class="dgrid" id="dgrid">
+      <div class="panel span2"><div class="ph"><h3>Recebimentos</h3><span class="ph-s" id="semSub"></span></div><div id="chSem"></div></div>
+      <div class="panel"><div class="ph"><h3>Andamento das fichas</h3></div><div id="chFunil"></div></div>
+      <div class="panel"><div class="ph"><h3>Certificados · materiais críticos</h3><span class="ph-s" id="certSub"></span></div><div id="chCert"></div></div>
+      <div class="panel"><div class="ph"><h3>Fornecedores com certificado pendente</h3></div><div id="chForn"></div></div>
+      <div class="panel"><div class="ph"><h3>Materiais críticos recebidos</h3><span class="ph-s">por grupo do CMC</span></div><div id="chCmc"></div></div>
+    </div>
+    <div class="sec-h"><h2>O que precisa de atenção</h2><span class="grow"></span><span class="dash-sub">fichas reais, sem filtro de período</span></div>
     <div class="cols" id="cols"></div>
   </section>
 
@@ -170,7 +252,7 @@ td.ck input{width:18px;height:18px;min-height:0}
       <select id="fTipo" aria-label="Tipo"><option value="">NF e romaneio</option><option value="NF">Só nota fiscal</option><option value="ROM">Só romaneio Anglo</option></select>
     </div>
     <div class="chips" id="chips"></div>
-    <div class="grid-cards" id="lista"></div>
+    <div class="tbl-wrap tbl-f"><table class="ft" id="lista"></table></div>
   </section>
 
   <section id="v-mapa" hidden>
@@ -340,6 +422,8 @@ td.ck input{width:18px;height:18px;min-height:0}
 <script src="assets/ficha-pdf.js"></script>
 <script src="assets/exemplo-docs.js"></script>
 <script src="assets/dados.js"></script>
+<script src="assets/ui.js"></script>
+<script src="assets/dashboard.js"></script>
 <script src="assets/atualizacao.js"></script>
 <script src="assets/diligenciamento.js"></script>
 <script>
@@ -354,34 +438,50 @@ function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("ar
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.v));
 
 function docTxt(f){return f.tipo==="ROM"?"Romaneio "+(f.romaneio||"—"):"NF "+(f.nf||"—")+" · "+(f.fornecedor||"—")}
-function confPill(f){if(f.status==="sem_acao")return"";const c=A.conf(f).situacao;return c==="devolvida"?'<span class="pill bad">Devolvida</span>':c==="pendente"?'<span class="pill em_andamento" style="background:transparent;border:1px solid currentColor">A conferir</span>':""}
-function card(f){
-  const its=A.itensValidos(f).length,pend=A.pendencias(f);
-  return `<button class="card ${f.status}" type="button" data-id="${f.id}">
-    <div class="top"><span class="num">${f.numero}</span><span class="pill ${f.tipo}">${A.TIPOS[f.tipo].curto}</span><span class="pill ${f.status}">${A.STATUS[f.status].rotulo}</span>${confPill(f)}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}</div>
-    <div class="meta">${esc(docTxt(f))}</div>
-    <div class="meta">${A.fmtData(f.dataRecebimento)} · ${its} ${its===1?"item":"itens"}${pend.includes("não conformidade")?' · <span style="color:var(--bad);font-weight:600">NC</span>':""}${f.status!=="finalizado"&&pend.includes("certificado")?' · <span style="color:var(--warn);font-weight:600">sem certificado</span>':""}</div>
-  </button>`;
-}
-function bind(root){root.querySelectorAll(".card[data-id]").forEach(c=>c.onclick=()=>abrir(fichas.find(f=>f.id===c.dataset.id)))}
+function card(f){return NXUI.fichaCard(A,f,{mostrarConferencia:true})}
+function bind(root){root.querySelectorAll("[data-id]").forEach(c=>c.onclick=()=>abrir(fichas.find(f=>f.id===c.dataset.id)))}
 
-/* painel */
+/* painel / dashboard */
+let periodo="90";try{periodo=localStorage.getItem("nx_periodo")||"90"}catch(e){}
+NXDASH.tooltip($("v-painel"));
 function renderPainel(){
-  const c=s=>fichas.filter(f=>f.status===s).length;
-  const nNF=fichas.filter(f=>f.tipo==="NF").length;
-  $("kpis").innerHTML=`<button class="k" data-s="todas"><b>${fichas.length}</b><span>Fichas</span><em>${nNF} NF · ${fichas.length-nNF} romaneio</em></button>`+
-    A.ORDEM_STATUS.map(s=>`<button class="k ${s}" data-s="${s}"><b>${c(s)}</b><span>${A.STATUS[s].rotulo}</span><em>${A.STATUS[s].dica}</em></button>`).join("");
-  $("kpis").querySelectorAll(".k").forEach(b=>b.onclick=()=>{fStatus=b.dataset.s;show("fichas");renderLista()});
-  const grupo=(s)=>{const l=fichas.filter(f=>f.status===s).sort((a,b)=>(a.dataRecebimento||"").localeCompare(b.dataRecebimento||""));
-    return `<div class="col"><h3><span class="pill ${s}">${A.STATUS[s].rotulo}</span>${l.length}</h3><div class="list">${l.length?l.slice(0,8).map(card).join(""):`<div class="empty" style="padding:16px">Nada aqui.</div>`}</div></div>`};
-  const col=(titulo,pill,l)=>`<div class="col"><h3>${pill}${l.length}</h3><div class="list">${l.length?l.slice(0,8).map(card).join(""):`<div class="empty" style="padding:16px">Nada aqui.</div>`}</div></div>`;
+  $("per").innerHTML=Object.entries(NXDASH.PER).map(([k,l])=>`<button type="button" data-p="${k}" aria-pressed="${k===periodo}">${l}</button>`).join("");
+  $("per").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{periodo=b.dataset.p;try{localStorage.setItem("nx_periodo",periodo)}catch(e){}renderPainel()});
+  const reais=fichas.filter(f=>!f.exemplo);
+  const usarDemo=A.store.modo==="exemplo"&&reais.length<5;
+  const base=(usarDemo?NXDASH.demo(A):fichas).filter(f=>NXDASH.noPeriodo(f,periodo));
+  $("dashDemo").hidden=!usarDemo;
+  if(usarDemo)$("dashDemo").innerHTML=NXUI.icon("chart")+"<span><b>Dados de demonstração.</b> Os gráficos usam fichas fictícias até o sistema entrar em uso com o Firebase. O quadro \"O que precisa de atenção\" mostra as fichas de verdade.</span>";
+  $("dashSub").textContent=NXDASH.PER[periodo]+" · "+base.length+" "+(base.length===1?"ficha":"fichas");
+  const m=NXDASH.metricas(A,base);
+  const kp=(cls,ic,tit,val,sub,s)=>`<button class="kp ${cls}" type="button" ${s?`data-s="${s}"`:""}><span class="kp-h"><span class="kp-i">${NXUI.icon(ic)}</span>${tit}</span><b>${val}</b><em>${sub}</em></button>`;
+  $("kpis").innerHTML=[
+    kp("","doc","Fichas",m.fichas,`${m.nf} NF · ${m.rom} romaneio`,"todas"),
+    kp("","box","Itens recebidos",m.itens.toLocaleString("pt-BR"),"em todas as fichas"),
+    kp("g","shield","Conformidade",m.conf===null?"—":`${(m.conf*100).toFixed(1).replace(".",",")}<small>%</small>`,m.inspecionados?`${m.nc} ${m.nc===1?"item não conforme":"itens não conformes"} de ${m.inspecionados}`:"sem inspeções"),
+    kp("w","cert","Certificados pendentes",m.cert.pendente+m.cert.naorec,`${m.cert.naorec} não recebidos · ${m.cert.avalidar} a validar`,"cert_pendente"),
+    kp("","clock","Tempo até a conferência",m.tm===null?"—":`${m.tm.toFixed(1).replace(".",",")}<small> dias</small>`,m.nTempos?`média de ${m.nTempos} fichas aprovadas`:"nenhuma aprovada")
+  ].join("");
+  if(!usarDemo)$("kpis").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{fStatus=b.dataset.s;show("fichas");renderLista()});
+  const serie=NXDASH.serieTempo(base,periodo);
+  $("semSub").textContent=serie.length&&serie[0].mensal?"fichas por mês":"fichas por semana";
+  NXDASH.barrasTempo($("chSem"),serie);
+  NXDASH.listaBarras($("chFunil"),A.ORDEM_STATUS.map((s,i)=>[A.STATUS[s].rotulo,m.porStatus[s],"o"+(i+1)]),{unid:"fichas"});
+  $("certSub").textContent=m.critTotal?`${m.critTotal} itens exigem certificado`:"";
+  NXDASH.certChart($("chCert"),m.cert,m.critTotal);
+  NXDASH.listaBarras($("chForn"),Object.entries(m.porForn).sort((a,b)=>b[1]-a[1]).slice(0,6),{unid:"itens sem certificado",vazio:"Nenhum fornecedor com pendência no período."});
+  NXDASH.listaBarras($("chCmc"),Object.entries(m.porCmc).sort((a,b)=>b[1]-a[1]),{unid:"itens",vazio:"Nenhum material crítico no período."});
+  $("dgrid").classList.add("viz");
+  /* quadro de atenção (fichas reais) */
+  const col=(tit,l)=>`<div class="col"><h3>${tit}<span class="cnt">${l.length}</span></h3><div class="list">${l.length?l.slice(0,6).map(card).join(""):`<div class="empty" style="padding:16px">Nada aqui.</div>`}</div></div>`;
   const aConf=fichas.filter(f=>f.status!=="sem_acao"&&f.status!=="finalizado"&&A.conf(f).situacao==="pendente");
   const devol=fichas.filter(f=>A.conf(f).situacao==="devolvida");
-  $("cols").innerHTML=col("",'<span class="pill em_andamento">A conferir</span>',aConf)+col("",'<span class="pill bad">Devolvidas ao campo</span>',devol)+grupo("sem_acao")+grupo("cert_pendente");
+  const ord=l=>l.sort((a,b)=>(a.dataRecebimento||"").localeCompare(b.dataRecebimento||""));
+  $("cols").innerHTML=col("A conferir",ord(aConf))+col("Devolvidas ao campo",ord(devol))+col("Sem ação",ord(fichas.filter(f=>f.status==="sem_acao")))+col("Certificado pendente",ord(fichas.filter(f=>f.status==="cert_pendente")));
   bind($("cols"));
 }
 
-/* fichas */
+/* fichas (tabela) */
 const CHIPS={todas:"Todas",...Object.fromEntries(A.ORDEM_STATUS.map(s=>[s,A.STATUS[s].rotulo]))};
 function renderLista(){
   $("chips").innerHTML=Object.entries(CHIPS).map(([k,l])=>`<button class="chip" aria-pressed="${k===fStatus}" data-k="${k}">${l}</button>`).join("");
@@ -389,7 +489,15 @@ function renderLista(){
   const q=A.norm($("q").value),t=$("fTipo").value;
   const l=fichas.filter(f=>(fStatus==="todas"||f.status===fStatus)&&(!t||f.tipo===t)&&(!q||A.norm([f.numero,f.nf,f.romaneio,f.fornecedor,...(f.itens||[]).flatMap(i=>[i.tag,i.descricao,i.certificado])].join(" ")).includes(q)))
     .sort((a,b)=>b.numero-a.numero);
-  $("lista").innerHTML=l.length?l.map(card).join(""):`<div class="empty" style="grid-column:1/-1"><strong>Nenhuma ficha encontrada</strong>Ajuste a busca ou os filtros.</div>`;
+  const I=NXUI.icon;
+  $("lista").innerHTML=`<thead><tr><th>Ficha</th><th>Tipo</th><th>Documento</th><th>Fornecedor</th><th>Recebimento</th><th>Itens</th><th>Pendências</th><th>Status</th></tr></thead><tbody>${l.length?l.map(f=>{
+    const p=A.pendencias(f),c=A.conf(f),al=[];
+    if(c.situacao==="devolvida")al.push(`<span style="color:var(--bad)">${I("undo")}Devolvida</span>`);
+    else if(f.status!=="sem_acao"&&f.status!=="finalizado"&&c.situacao==="pendente")al.push(`<span style="color:var(--wait)">${I("eye")}A conferir</span>`);
+    if(f.status!=="finalizado"&&p.includes("certificado"))al.push(`<span style="color:var(--warn)">${I("cert")}${A.semCertificado(f).length} sem cert.</span>`);
+    if(p.includes("validar certificado"))al.push(`<span style="color:var(--wait)">${I("check")}Validar cert.</span>`);
+    if(p.includes("não conformidade"))al.push(`<span style="color:var(--bad)">${I("alert")}NC</span>`);
+    return `<tr data-id="${f.id}"><td class="n">${f.numero}${f.exemplo?' <span class="ex">exemplo</span>':""}</td><td><span class="pill ${f.tipo}">${f.tipo==="ROM"?"ROMANEIO":"NF"}</span></td><td>${esc(f.tipo==="ROM"?f.romaneio:f.nf)}</td><td>${esc(f.tipo==="ROM"?"Anglo American":f.fornecedor)}</td><td class="s">${A.fmtData(f.dataRecebimento)}</td><td>${A.itensValidos(f).length}</td><td><div class="al">${al.join("")||'<span class="s">—</span>'}</div></td><td><span class="pill ${f.status}">${A.STATUS[f.status].rotulo}</span></td></tr>`}).join(""):`<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--muted)">Nenhuma ficha encontrada. Ajuste a busca ou os filtros.</td></tr>`}</tbody>`;
   bind($("lista"));
 }
 $("q").oninput=renderLista;$("fTipo").onchange=renderLista;

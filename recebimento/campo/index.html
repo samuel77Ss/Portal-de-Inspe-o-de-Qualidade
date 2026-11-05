@@ -131,6 +131,17 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .splash .sp-btn span{font-size:1.4rem;line-height:1}
 .splash .sp-rod{margin-top:18px;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;opacity:.65}
 @media (prefers-reduced-motion:no-preference){.splash .sp-in{animation:spIn .5s ease-out}@keyframes spIn{from{opacity:0;transform:translateY(14px)}}}
+.hello{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin:2px 0 12px}
+.hello-d{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.hello-t{margin:2px 0 0;font:700 1.35rem var(--f-display);letter-spacing:-.02em;color:var(--ink)}
+.resumo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rs{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow);display:grid;gap:6px}
+.rs .ri{width:30px;height:30px;border-radius:9px;display:grid;place-items:center}
+.rs .ri .ico{width:16px;height:16px}
+.rs b{font:700 1.4rem var(--f-display);line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.rs small{font-size:.7rem;color:var(--muted);font-weight:600;line-height:1.25}
+.rs.a .ri{background:var(--wait-bg);color:var(--wait)} .rs.b .ri{background:var(--bad-bg);color:var(--bad)} .rs.c .ri{background:var(--warn-bg);color:var(--warn)}
+#devolvidas{display:grid;gap:8px}
 .back{background:none;border:0;color:var(--head-ink);font:600 .9rem var(--f-body);padding:8px 8px 8px 0;cursor:pointer}
 </style>
 </head>
@@ -163,6 +174,11 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 <main class="wrap">
   <!-- INÍCIO -->
   <section id="v-inicio">
+    <div class="hello">
+      <div><span class="hello-d" id="helloData"></span><h2 class="hello-t" id="helloT">Bom dia</h2></div>
+    </div>
+    <div class="resumo" id="resumo"></div>
+    <div class="sec-h" style="margin-top:18px"><h2>Novo recebimento</h2></div>
     <div class="start">
       <button class="go" type="button" data-novo="NF">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 9h8M8 12h8M8 15h5"/></svg>
@@ -182,11 +198,11 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
       <button class="btn primary small" id="btnInstalar" type="button">Instalar</button>
     </div>
     <div id="devolBox" hidden>
-      <h2 class="sec" style="color:var(--bad)">Devolvidas para correção <span class="pill bad" id="devolN"></span></h2>
+      <div class="sec-h"><h2 style="color:var(--bad)">Devolvidas para correção</h2><span class="cnt" id="devolN"></span></div>
       <div class="list" id="devolvidas"></div>
     </div>
-    <h2 class="sec">Lançamentos recentes</h2>
-    <div class="list" id="recentes"></div>
+    <div class="sec-h"><h2>Lançamentos recentes</h2><span class="cnt" id="recN"></span></div>
+    <div class="lista-g" id="recentes"></div>
   </section>
 
   <!-- LANÇAMENTO -->
@@ -284,6 +300,7 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 <script src="../assets/diligenciamento.js"></script>
 <script src="../assets/exemplo-docs.js"></script>
 <script src="../assets/dados.js"></script>
+<script src="../assets/ui.js"></script>
 <script src="../assets/atualizacao.js"></script>
 <script>
 (function(){
@@ -309,21 +326,26 @@ function motivosTxt(c){return (c.motivos||[]).map(m=>A.MOTIVOS[m]||m).join(" · 
 function renderDevolvidas(){
   const d=fichas.filter(f=>A.conf(f).situacao==="devolvida").sort((a,b)=>a.numero-b.numero);
   $("devolBox").hidden=!d.length;$("devolN").textContent=d.length;
-  $("devolvidas").innerHTML=d.map(f=>{const c=A.conf(f);return `<button class="card devol-card" type="button" data-ed="${f.id}">
-    <div class="top"><span class="num">${f.numero}</span><span class="pill ${f.tipo}">${A.TIPOS[f.tipo].curto}</span><span class="pill bad">Inconforme</span>${f.exemplo?'<span class="pill warn">Exemplo</span>':""}</div>
-    <div class="meta">${f.tipo==="ROM"?"Romaneio "+esc(f.romaneio):"NF "+esc(f.nf)+" · "+esc(f.fornecedor)}</div>
-    <div class="why">${esc(motivosTxt(c))}</div></button>`}).join("");
+  $("devolvidas").innerHTML=d.map(f=>NXUI.fichaCard(A,f,{attrs:`data-ed="${f.id}"`,motivo:motivosTxt(A.conf(f))||"Devolvida para correção"})).join("");
   $("devolvidas").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>abrirEdicao(fichas.find(f=>f.id===b.dataset.ed)));
 }
+function renderResumo(){
+  const h=new Date(),hoje=A.hoje();
+  const hr=h.getHours();$("helloT").textContent=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite";
+  $("helloData").textContent=h.toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+  const nHoje=fichas.filter(f=>(f.criadoEm||"").slice(0,10)===hoje||f.dataRecebimento===hoje).length;
+  const nDev=fichas.filter(f=>A.conf(f).situacao==="devolvida").length;
+  const nCert=fichas.filter(f=>f.tipo==="NF"&&f.status!=="finalizado").reduce((s,f)=>s+A.semCertificado(f).length,0);
+  $("resumo").innerHTML=[["a","truck",nHoje,"Recebidos hoje"],["b","undo",nDev,"Para corrigir"],["c","cert",nCert,"Certificados pendentes"]]
+    .map(([c,i,n,t])=>`<div class="rs ${c}"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t}</small></div>`).join("");
+}
 function renderRecentes(){
-  renderDevolvidas();
+  renderDevolvidas();renderResumo();
   const rs=fichas.slice().sort((a,b)=>(b.atualizadoEm||"").localeCompare(a.atualizadoEm||"")).slice(0,15);
-  $("recentes").innerHTML=rs.length?rs.map(f=>{
-    const its=A.itensValidos(f).length;
-    return `<div class="card ${f.status}">
-      <div class="top"><span class="num">${f.numero}</span><span class="pill ${f.tipo}">${A.TIPOS[f.tipo].curto}</span><span class="pill ${f.status}">${A.STATUS[f.status].rotulo}</span>${f.exemplo?'<span class="pill warn">Exemplo</span>':""}</div>
-      <div class="meta">${f.tipo==="ROM"?"Romaneio "+esc(f.romaneio):"NF "+esc(f.nf)+" · "+esc(f.fornecedor)} · ${A.fmtData(f.dataRecebimento)} · ${its} ${its===1?"item":"itens"}</div>
-    </div>`}).join(""):`<div class="empty"><strong>Nenhum lançamento ainda</strong>Toque em Nota fiscal ou Romaneio para registrar o primeiro recebimento.</div>`;
+  $("recN").textContent=rs.length||"";
+  $("recentes").className=rs.length?"lista-g":"";
+  $("recentes").innerHTML=rs.length?rs.map(f=>NXUI.fichaCard(A,f,{attrs:`data-ver="${f.id}"`})).join(""):`<div class="empty"><strong>Nenhum lançamento ainda</strong>Toque em Nota fiscal ou Romaneio para registrar o primeiro recebimento.</div>`;
+  $("recentes").querySelectorAll("[data-ver]").forEach(b=>b.onclick=()=>{const f=fichas.find(x=>x.id===b.dataset.ver);if(A.conf(f).situacao==="devolvida")abrirEdicao(f);else toast(`Ficha ${f.numero}: ${A.STATUS[f.status].rotulo}${A.conf(f).situacao==="aprovada"?" · conferida pelo escritório":" · aguardando conferência do escritório"}`)});
   const fs=[...new Set(fichas.filter(f=>f.tipo==="NF").map(f=>A.norm(f.fornecedor)).filter(Boolean))].sort();
   $("listaForn").innerHTML=fs.map(x=>`<option value="${esc(x)}">`).join("");
 }
