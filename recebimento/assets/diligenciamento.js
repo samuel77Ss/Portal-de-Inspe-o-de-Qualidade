@@ -12,7 +12,8 @@
     biblioteca: "Suprimentos",
     /* Pasta atual da planilha (link enviado em 05/11/2026). A antiga fica como reserva. */
     pastas: ["RELATORIO DILIGENCIAMENTO", "01_Base Diligenciamento"],
-    arquivo: "relatorio_diligenciamento_093945.xlsx",
+    /* O nome muda a cada exportação (ex.: relatorio_diligenciamento_05_11.xlsx): usa sempre o mais recente da pasta */
+    padraoArquivo: /^relatorio[_ ]?diligenciamento.*\.xlsx?$/i,
     escopos: ["User.Read", "Files.Read.All", "Sites.Read.All"]
   };
 
@@ -109,38 +110,36 @@
   }
   let alvo = null; /* {driveId, itemId} */
   async function localizarArquivo() {
-    const site = await (await graph(`/sites/${CFG.host}:${CFG.site}?$select=id`)).json();
-    const drives = (await (await graph(`/sites/${site.id}/drives?$select=id,name,webUrl`)).json()).value;
-    const drive = drives.find(d => norm(d.name) === norm(CFG.biblioteca) || decodeURIComponent(d.webUrl || "").endsWith("/" + CFG.biblioteca)) || drives[0];
+    if (!localizarArquivo.drive) {
+      const site = await (await graph(`/sites/${CFG.host}:${CFG.site}?$select=id`)).json();
+      const drives = (await (await graph(`/sites/${site.id}/drives?$select=id,name,webUrl`)).json()).value;
+      localizarArquivo.drive = drives.find(d => norm(d.name) === norm(CFG.biblioteca) || decodeURIComponent(d.webUrl || "").endsWith("/" + CFG.biblioteca)) || drives[0];
+    }
+    const drive = localizarArquivo.drive;
     const enc = s => s.split("/").map(encodeURIComponent).join("/");
     let aviso = "";
-    /* 1) arquivo com o nome conhecido, em cada pasta */
-    for (const pasta of CFG.pastas) {
-      try {
-        const it = await (await graph(`/drives/${drive.id}/root:/${enc(pasta + "/" + CFG.arquivo)}?$select=id,name`)).json();
-        alvo = { driveId: drive.id, itemId: it.id };
-        if (pasta !== CFG.pastas[0]) aviso = `Planilha encontrada na pasta antiga (${pasta}).`;
-        return aviso;
-      } catch (e) { if (e.status !== 404) throw e; }
-    }
-    /* 2) o .xlsx mais recente da pasta principal (se o nome do arquivo mudar) */
+    /* Lista a pasta e pega a planilha modificada por último (nome com data muda a cada dia) */
     for (const pasta of CFG.pastas) {
       let lista = [];
       try { lista = (await (await graph(`/drives/${drive.id}/root:/${enc(pasta)}:/children?$select=id,name,lastModifiedDateTime,file&$top=200`)).json()).value; }
       catch (e) { if (e.status !== 404) throw e; continue; }
-      lista = lista.filter(x => x.file && /\.xlsx?$/i.test(x.name) && !/^~\$/.test(x.name)).sort((a, b) => b.lastModifiedDateTime.localeCompare(a.lastModifiedDateTime));
-      if (lista.length) { alvo = { driveId: drive.id, itemId: lista[0].id }; aviso = `Usando a planilha mais recente da pasta ${pasta}: ${lista[0].name}.`; return aviso; }
+      const xlsx = lista.filter(x => x.file && /\.xlsx?$/i.test(x.name) && !/^~\$/.test(x.name));
+      const preferidos = xlsx.filter(x => CFG.padraoArquivo.test(x.name));
+      const escolha = (preferidos.length ? preferidos : xlsx).sort((a, b) => b.lastModifiedDateTime.localeCompare(a.lastModifiedDateTime))[0];
+      if (escolha) {
+        alvo = { driveId: drive.id, itemId: escolha.id };
+        if (pasta !== CFG.pastas[0]) aviso = `Planilha encontrada na pasta antiga (${pasta}).`;
+        return aviso;
+      }
     }
     throw new Error("Planilha de Diligenciamento não encontrada na pasta " + CFG.pastas[0] + ".");
-    return aviso;
   }
   /* Sempre confere a versão atual; só baixa de novo se o arquivo mudou */
   async function atualizarDoSharePoint() {
-    let aviso = "";
-    if (!alvo) aviso = await localizarArquivo();
+    const aviso = await localizarArquivo();
     let meta;
     try { meta = await (await graph(`/drives/${alvo.driveId}/items/${alvo.itemId}?$select=id,name,eTag,lastModifiedDateTime,size`)).json(); }
-    catch (e) { if (e.status === 404) { alvo = null; return atualizarDoSharePoint(); } throw e; }
+    catch (e) { throw e; }
     if (fonte && fonte.tipo === "sharepoint" && fonte.eTag === meta.eTag) return { ...fonte, aviso, recarregada: false };
     const buf = await (await graph(`/drives/${alvo.driveId}/items/${alvo.itemId}/content`)).arrayBuffer();
     const idx = indexar(buf);
