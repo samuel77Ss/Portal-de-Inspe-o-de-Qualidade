@@ -50,6 +50,7 @@
     const its = A.itensValidos(f);
     return its.map((i, n) => {
       let cert = i.certificado;
+      if (!cert && i.temCertAnexo) cert = "ANEXO";
       if (!cert) cert = f.tipo === "ROM" ? "OBS 1" : (A.exigeCert(f, i) ? "PENDENTE" : "N/A");
       return [String(n + 1), i.descricao, i.tag || "", f.tipo === "ROM" ? "N/A" : (f.nf || ""), f.romaneio || "", cert, i.und || "",
         A.fmtQtd(i.qtd), A.fmtData(f.dataRecebimento), f.fornecimento || "", f.fornecedor || "", i.local || "", i.conf === "NA" ? "N/A" : (i.conf || "")];
@@ -59,7 +60,7 @@
     const partes = [];
     if (f.observacao) partes.push(f.observacao);
     if (f.tipo === "NF") {
-      const pend = A.itensValidos(f).map((i, n) => (A.exigeCert(f, i) && !i.certificado) ? n + 1 : 0).filter(Boolean);
+      const pend = A.itensValidos(f).map((i, n) => (A.exigeCert(f, i) && !A.temCert(i)) ? n + 1 : 0).filter(Boolean);
       if (pend.length) partes.push(`Certificado de qualidade pendente: item(ns) ${pend.join(", ")}. Material crítico conforme CMC; cobrança enviada ao fornecedor.`);
       const nc = A.itensValidos(f).map((i, n) => i.conf === "NC" ? n + 1 : 0).filter(Boolean);
       if (nc.length) partes.push(`Item(ns) não conforme(s): ${nc.join(", ")}. Emitir RNC, segregar e identificar.`);

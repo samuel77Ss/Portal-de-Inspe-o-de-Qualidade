@@ -130,6 +130,7 @@
     if (typeof i.exigeCertificado === "boolean") return i.exigeCertificado;
     return !!materialCritico(i.descricao, i.tag);
   }
+  const temCert = i => !!(i.certificado || i.temCertAnexo);
   const STATUS_ITEM = {
     nao_conforme: { rotulo: "Não conforme", cls: "bad" },
     cert_pendente: { rotulo: "Certificado pendente", cls: "cert_pendente" },
@@ -139,14 +140,14 @@
   };
   function statusItem(f, i) {
     if (i.conf === "NC") return "nao_conforme";
-    if (exigeCert(f, i) && !i.certificado) return "cert_pendente";
+    if (exigeCert(f, i) && !temCert(i)) return "cert_pendente";
     if (exigeCert(f, i) && !i.certValidado) return "cert_a_validar";
     if (conf(f).situacao !== "aprovada") return "aguardando";
     return "conforme";
   }
   /* Itens que exigem certificado e estão sem ele */
   const chaveItem = (i, n) => i.pc && i.itemPc ? `PC${i.pc}/${i.itemPc}` : `#${n + 1}|${norm(i.tag)}|${norm(i.descricao).slice(0, 40)}`;
-  function semCertificado(f) { return itensValidos(f).map((i, n) => ({ i, n, k: chaveItem(i, n) })).filter(x => exigeCert(f, x.i) && !x.i.certificado); }
+  function semCertificado(f) { return itensValidos(f).map((i, n) => ({ i, n, k: chaveItem(i, n) })).filter(x => exigeCert(f, x.i) && !temCert(x.i)); }
   function cobrados(f) { return new Set((f.cobrancas || []).flatMap(c => c.itens || [])); }
   function pendentesDeCobranca(f) { const c = cobrados(f); return semCertificado(f).filter(x => !c.has(x.k)); }
   function montarEmailCobranca(f, lista) {
@@ -164,8 +165,8 @@
   function pendencias(f) {
     const p = [];
     if (!itensValidos(f).length) p.push("sem itens");
-    if (itensValidos(f).some(i => exigeCert(f, i) && !i.certificado)) p.push("certificado");
-    if (itensValidos(f).some(i => exigeCert(f, i) && i.certificado && !i.certValidado)) p.push("validar certificado");
+    if (itensValidos(f).some(i => exigeCert(f, i) && !temCert(i))) p.push("certificado");
+    if (itensValidos(f).some(i => exigeCert(f, i) && temCert(i) && !i.certValidado)) p.push("validar certificado");
     if (itensValidos(f).some(i => i.conf === "NC")) p.push("não conformidade");
     return p;
   }
@@ -321,6 +322,6 @@
     return [...new Set([...(fo?.emails || []), ...Object.keys(GRUPOS).flatMap(k => c.grupos[k] || [])])];
   }
 
-  window.AMR = { CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { temCert, CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();

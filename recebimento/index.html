@@ -450,7 +450,7 @@ function renderItens(){
     <td><input data-k="descricao" value="${esc(it.descricao)}" aria-label="Descrição">${ref}${crit}</td>
     <td><input data-k="tag" value="${esc(it.tag)}" aria-label="TAG"></td>
     <td class="ck">${ed.tipo==="NF"?`<input type="checkbox" data-ex="${i}" ${ex?"checked":""} aria-label="Exige certificado">`:'<span class="hint">—</span>'}</td>
-    <td><input data-k="certificado" value="${esc(ed.tipo==="ROM"&&!it.certificado?"":it.certificado)}" placeholder="${ed.tipo==="ROM"?"OBS 1":ex?"pendente":"não exige"}" aria-label="Certificado">${ex&&it.certificado?`<label class="cval"><input type="checkbox" data-val="${i}" ${it.certValidado?"checked":""}>validado pela Qualidade</label>`:""}</td>
+    <td><input data-k="certificado" value="${esc(ed.tipo==="ROM"&&!it.certificado?"":it.certificado)}" placeholder="${ed.tipo==="ROM"?"OBS 1":ex?"pendente":"não exige"}" aria-label="Certificado">${(()=>{const anx=(ed.anexos?.cert||[]).map((a,k)=>({a,k})).filter(x=>x.a.item===i);return anx.length?`<button type="button" class="cval" data-vercert="${anx[0].k}" style="background:none;border:0;padding:0;cursor:pointer;color:var(--accent);font-weight:600">📎 ver ${anx.length} ${anx.length===1?"arquivo":"arquivos"}</button>`:""})()}${ex&&A.temCert(it)?`<label class="cval"><input type="checkbox" data-val="${i}" ${it.certValidado?"checked":""}>validado pela Qualidade</label>`:""}</td>
     <td><select data-k="und" aria-label="Unidade">${A.UNIDADES.includes(it.und)?"":`<option>${esc(it.und)}</option>`}${und}</select></td>
     <td><input data-k="qtd" type="number" step="any" min="0" value="${esc(it.qtd)}" style="width:80px" aria-label="Quantidade"></td>
     <td><input data-k="local" value="${esc(it.local)}" aria-label="Local"></td>
@@ -462,6 +462,7 @@ function renderItens(){
     tr.querySelectorAll("[data-k]").forEach(inp=>inp.addEventListener("change",()=>{const k=inp.dataset.k;edItens[i][k]=k==="qtd"?(inp.value===""?"":Number(inp.value)):(["descricao","tag","local"].includes(k)?inp.value.toUpperCase():inp.value);if(k==="certificado")edItens[i].certValidado=false;if(k==="qtd"||k==="und")edItens[i].conferirNF=false;if(k==="qtd"||k==="certificado"||k==="conf"||k==="descricao"||k==="tag")renderItens();avisos()}));
     tr.querySelector("[data-del]").onclick=()=>{edItens.splice(i,1);renderItens();avisos()};
     const ex=tr.querySelector("[data-ex]");if(ex)ex.onchange=()=>{edItens[i].exigeCertificado=ex.checked;renderItens();avisos()};
+    const vc=tr.querySelector("[data-vercert]");if(vc)vc.onclick=()=>{vTab="cert";vIdx=(ed.anexos?.cert||[]).length?Math.max(0,+vc.dataset.vercert):0;renderViewer();document.querySelector(".viewer").scrollIntoView({behavior:"smooth",block:"start"})};
     const va=tr.querySelector("[data-val]");if(va)va.onchange=()=>{edItens[i].certValidado=va.checked;renderItens();avisos()};
   });
   const v=A.itensValidos({...ed,itens:edItens}).length;
