@@ -11,6 +11,8 @@
 <style>
 /* Painel do escritório: abas no cabeçalho; indicadores por status; fichas em cartões; mapa FP-11 em tabela rolável; cadastros em colunas */
 html{padding-top:env(safe-area-inset-top,0px)}
+.wrap{max-width:1560px}
+.tabs{max-width:720px}
 main{padding-block:18px 60px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis .k:first-child{grid-column:1/-1}}
@@ -444,6 +446,7 @@ function bind(root){root.querySelectorAll("[data-id]").forEach(c=>c.onclick=()=>
 /* painel / dashboard */
 let periodo="90";try{periodo=localStorage.getItem("nx_periodo")||"90"}catch(e){}
 NXDASH.tooltip($("v-painel"));
+let rszT;window.addEventListener("resize",()=>{clearTimeout(rszT);rszT=setTimeout(()=>{if(!$("v-painel").hidden)renderPainel()},200)});
 function renderPainel(){
   $("per").innerHTML=Object.entries(NXDASH.PER).map(([k,l])=>`<button type="button" data-p="${k}" aria-pressed="${k===periodo}">${l}</button>`).join("");
   $("per").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{periodo=b.dataset.p;try{localStorage.setItem("nx_periodo",periodo)}catch(e){}renderPainel()});

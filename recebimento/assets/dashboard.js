@@ -86,7 +86,7 @@
   /* ---------- gráficos (SVG/HTML, sem biblioteca) ---------- */
   function barrasTempo(el, serie) {
     if (!serie.length) { el.innerHTML = '<div class="ch-vazio">Sem recebimentos no período.</div>'; return; }
-    const W = 640, H = 220, pl = 30, pr = 8, pt = 14, pb = 26, max = Math.max(1, ...serie.map(s => s.nf + s.rom));
+    const W = Math.max(320, Math.round(el.clientWidth || 640)), H = 240, pl = 30, pr = 8, pt = 14, pb = 26, max = Math.max(1, ...serie.map(s => s.nf + s.rom));
     const passo = Math.max(1, Math.ceil(max / 4)), topo = passo * Math.ceil(max / passo);
     const bw = (W - pl - pr) / serie.length, larg = Math.min(34, bw * 0.62);
     let g = "";
