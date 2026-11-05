@@ -53,6 +53,11 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .item-head{display:flex;align-items:center;gap:8px}
 .item-head b{font-family:var(--f-display);font-size:1.05rem;text-transform:uppercase}
 .item-head .x{margin-left:auto;background:none;border:0;color:var(--bad);font:600 .8rem var(--f-body);cursor:pointer;padding:6px}
+.item-ref{font-size:.74rem;color:var(--muted);font-family:var(--f-mono);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.item-ref .dl{background:var(--wait-bg);color:var(--wait);border-radius:3px;padding:1px 5px;font-family:var(--f-body);font-weight:600}
+.item-ref .div{color:var(--warn);font-weight:600;font-family:var(--f-body)}
+.excert{display:flex;gap:8px;align-items:center;font-size:.85rem;font-weight:500}
+.excert input{width:20px;height:20px;min-height:0}
 .zero-note{font-size:.78rem;color:var(--warn);font-weight:600}
 .dup{display:grid;gap:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -306,11 +311,13 @@ $("segTipo").innerHTML=`<button type="button" data-t="NF">Nota fiscal (Milplan)<
 $("segTipo").querySelectorAll("button").forEach(b=>b.onclick=()=>setTipo(b.dataset.t));
 
 function novoItem(){return{descricao:"",tag:"",und:tipo==="ROM"?"PÇ":"UND",qtd:"",certificado:"",local:$("localPadrao").value.trim().toUpperCase(),conf:"C"}}
+function localLembrado(){try{return localStorage.getItem("amr_local_padrao")||""}catch(e){return""}}
+function lembrarLocal(v){try{if(v)localStorage.setItem("amr_local_padrao",v)}catch(e){}}
 function abrirNovo(t){
   editando=null;setChave(null);resetDilig();$("segTipo").hidden=false;$("devolMsg").hidden=true;$("btnChegada").hidden=false;$("btnEnviar").textContent="Enviar recebimento";
   itens=[novoItem()]; fotosDoc=[]; fotosCert=[];
   ["nf","fornecedor","romaneio","romaneioA","obs","localPadrao"].forEach(id=>$(id).value="");
-  $("data").value=A.hoje();
+  $("data").value=A.hoje();$("localPadrao").value=localLembrado();
   setTipo(t); itens=[novoItem()]; renderItens(); renderThumbs(); show("lancar");
 }
 function abrirEdicao(f){
@@ -334,15 +341,17 @@ function renderItens(){
     const zero=tipo==="ROM"&&it.qtd!==""&&Number(it.qtd)===0;
     const flag=editando&&(A.conf(editando).itens||[]).includes(i);
     return `<div class="item${zero?" zero":""}${flag?" flag":""}" data-i="${i}">
+      ${it.pc?`<div class="item-ref">${it.origem==="diligenciamento"?'<span class="dl">Diligenciamento</span>':""}<span>PC ${esc(it.pc)}/${esc(it.itemPc)}</span>${it.qtdPedido!==undefined&&it.qtdPedido!==""?`<span>pedido ${A.fmtQtd(it.qtdPedido)} ${esc(it.undPedido||"")}</span>`:""}${it.undPedido&&A.norm(it.undPedido)!==A.norm(it.und)?'<span class="div">unidade diferente do pedido</span>':""}</div>`:""}
       <div class="item-head"><b>Item ${i+1}</b>${flag?'<span class="pill bad">Corrigir</span>':""}${zero?'<span class="zero-note">0 entregue · fora da ficha</span>':""}${itens.length>1?`<button type="button" class="x" data-del="${i}">Remover</button>`:""}</div>
       <div class="f"><label>Descrição</label><input data-k="descricao" value="${esc(it.descricao)}" autocomplete="off"></div>
       <div class="grid2">
         <div class="f"><label>TAG / código</label><div class="tagwrap"><input data-k="tag" value="${esc(it.tag)}" autocomplete="off"><button type="button" data-scantag="${i}" aria-label="Escanear TAG do item ${i+1}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="13" width="4" height="4"/><path d="M13 7h4v4M7 13v4h4"/></svg></button></div></div>
         <div class="f"><label>${tipo==="ROM"?"Qtd. entregue":"Qtd. recebida"}</label><input data-k="qtd" type="number" min="0" step="any" inputmode="decimal" value="${esc(it.qtd)}"></div>
-        <div class="f"><label>Unidade</label><select data-k="und">${und}</select></div>
+        <div class="f"><label>Unidade</label><select data-k="und">${A.UNIDADES.includes(it.und)?"":`<option>${esc(it.und)}</option>`}${und}</select></div>
         ${tipo==="NF"?`<div class="f"><label>Nº certificado</label><input data-k="certificado" value="${esc(it.certificado)}" autocomplete="off"></div>`:`<div class="f"><label>Certificado</label><input value="OBS 1 (sem certificado)" disabled></div>`}
         <div class="f full"><label>Local</label><input data-k="local" value="${esc(it.local)}" autocomplete="off"></div>
       </div>
+      ${tipo==="NF"?`<label class="excert"><input type="checkbox" data-ex ${A.exigeCert({tipo},it)?"checked":""}>Exige certificado de qualidade</label>`:""}
       <div class="f"><label>Inspeção</label><div class="seg" data-conf>${Object.keys(A.CONF).map(k=>`<button type="button" class="${k}" data-c="${k}" aria-pressed="${it.conf===k}">${k==="NA"?"N/A":k}</button>`).join("")}</div></div>
     </div>`}).join("");
   $("itens").querySelectorAll(".item").forEach(el=>{
@@ -353,12 +362,13 @@ function renderItens(){
       if(k==="qtd"&&tipo==="ROM"){const z=inp.value!==""&&Number(inp.value)===0;if(z!==el.classList.contains("zero")){const pos=inp.selectionStart;renderItens();const n=$("itens").querySelector(`[data-i="${i}"] [data-k="qtd"]`);n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}}
     }));
     el.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{itens[i].conf=b.dataset.c;el.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+    const exb=el.querySelector("[data-ex]");if(exb)exb.onchange=()=>{itens[i].exigeCertificado=exb.checked};
     const sb=el.querySelector("[data-scantag]");if(sb)sb.onclick=()=>abrirScanner("TAG do item "+(i+1),"Aponte para a etiqueta, código de barras ou QR code do material.",txt=>{itens[i].tag=A.norm(txt);renderItens();toast("TAG do item "+(i+1)+" preenchida")});
     const d=el.querySelector("[data-del]"); if(d)d.onclick=()=>{itens.splice(i,1);renderItens()};
   });
 }
 $("btnItem").onclick=()=>{itens.push(novoItem());renderItens();const l=$("itens").lastElementChild;l.scrollIntoView({behavior:"smooth",block:"center"});l.querySelector("input").focus()};
-$("localPadrao").addEventListener("change",()=>{const v=$("localPadrao").value.trim().toUpperCase();$("localPadrao").value=v;itens.forEach(it=>it.local=v);renderItens()});
+$("localPadrao").addEventListener("change",()=>{const v=$("localPadrao").value.trim().toUpperCase();$("localPadrao").value=v;lembrarLocal(v);itens.forEach(it=>it.local=v);renderItens()});
 
 /* fotos (etapa 1: ficam só nesta tela; o armazenamento entra na etapa 3) */
 function lerFotos(files,arr){
@@ -474,9 +484,9 @@ function lembrarCodigo(cod){
 function usarDilig(){
   const sel=[...dlSel].sort((a,b)=>a-b).map(i=>dlRes.itens[i]);
   if(!sel.length){toast("Marque pelo menos um item.",true);return}
-  const enc=dlRes.situacao==="encontrada",local=$("localPadrao").value.trim().toUpperCase();
+  const enc=dlRes.situacao==="encontrada",local=$("localPadrao").value.trim().toUpperCase()||localLembrado();
   const novos=sel.map(it=>({descricao:A.norm(it.descricao+(it.descComp?" - "+it.descComp:"")),tag:it.codigo,und:A.norm(it.un),qtd:enc?(it.qtdReceb||it.qtd):"",certificado:"",local,conf:"C",
-    pc:it.pc,itemPc:it.itemPc,exigeCertificado:!!it.pedeCertificado,origem:"diligenciamento",qtdPedido:it.qtd}));
+    pc:it.pc,itemPc:it.itemPc,exigeCertificado:!!it.pedeCertificado,origem:"diligenciamento",qtdPedido:it.qtd,undPedido:A.norm(it.un)}));
   const vazios=itens.every(x=>!x.descricao&&!x.tag);
   itens=vazios?novos:[...itens,...novos];
   if(dlRes.itens[0]&&!$("romaneio").value)$("romaneio").value=String(+dlRes.itens[0].pc)+"-REV-00";
@@ -513,10 +523,13 @@ async function enviar(status){
   if(status==="em_andamento"&&!A.itensValidos(f).length){toast("Adicione pelo menos um item com descrição.",true);return}
   if(editando)status=editando.status==="sem_acao"?"em_andamento":(editando.status==="cert_pendente"?"em_andamento":editando.status);
   f.status=status;
-  const semCert=tipo==="NF"&&status==="em_andamento"&&A.itensValidos(f).some(i=>!i.certificado);
+  const semCert=tipo==="NF"&&status==="em_andamento"&&A.pendencias(f).includes("certificado");
   if(semCert)f.status="cert_pendente";
-  const fc=A.marcarConferencia(f,editando?"reenviada":"enviada",{por:"Campo"});
-  try{const s=await A.store.salvar(fc);$("okNum").textContent=s.numero;$("okMsg").textContent=editando?"Correção reenviada para conferência do escritório":status==="sem_acao"?"Chegada registrada. Faça o recebimento quando puder.":semCert?"Enviado com certificado pendente. O aviso por e-mail será ativado na etapa 5.":"Recebimento enviado para o escritório";$("okDoc").textContent=(tipo==="ROM"?"Romaneio ":"NF ")+(f.tipo==="ROM"?f.romaneio:f.nf)+" · "+A.itensValidos(f).length+" itens na ficha";editando=null;show("ok")}
+  let fc=A.marcarConferencia(f,editando?"reenviada":"enviada",{por:"Campo"});
+  const nd=(f.anexos?.doc||[]).length-((editando?.anexos?.doc)||[]).length,nc=(f.anexos?.cert||[]).length-((editando?.anexos?.cert)||[]).length;
+  if(nd>0||nc>0)fc=A.registrar(fc,"anexos",{por:"Campo",txt:[nd>0?`${nd} foto(s) do documento`:"",nc>0?`${nc} certificado(s)`:""].filter(Boolean).join(" · ")});
+  lembrarLocal($("localPadrao").value.trim().toUpperCase());
+  try{const s=await A.store.salvar(fc);$("okNum").textContent=s.numero;$("okMsg").textContent=editando?"Correção reenviada para conferência do escritório":status==="sem_acao"?"Chegada registrada. Faça o recebimento quando puder.":semCert?"Enviado com certificado pendente. O escritório vai cobrar o fornecedor.":"Recebimento enviado para o escritório";$("okDoc").textContent=(tipo==="ROM"?"Romaneio ":"NF ")+(f.tipo==="ROM"?f.romaneio:f.nf)+" · "+A.itensValidos(f).length+" itens na ficha";editando=null;show("ok")}
   catch(e){toast(e.code==="duplicada"?e.message:"Não foi possível salvar. Tente de novo.",true)}
 }
 $("btnEnviar").onclick=()=>enviar("em_andamento");

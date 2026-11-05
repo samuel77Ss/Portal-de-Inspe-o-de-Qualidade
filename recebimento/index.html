@@ -60,7 +60,7 @@ table.mapa tr:hover td{background:var(--surface-2)}
 .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:700px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .it-wrap{overflow-x:auto}
-table.its{border-collapse:collapse;width:100%;min-width:880px;font-size:.82rem}
+table.its{border-collapse:collapse;width:100%;min-width:1080px;font-size:.82rem}
 table.its th{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:4px 4px;font-weight:600}
 table.its td{padding:3px 3px;vertical-align:top}
 table.its input,table.its select{min-height:36px;padding:6px 7px;font-size:.82rem}
@@ -76,7 +76,7 @@ table.its .del{background:none;border:0;color:var(--bad);cursor:pointer;font-siz
 .actions .sp{flex:1}
 /* conferência */
 .sheet{max-width:1240px}
-.sheet-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;padding:14px 16px;align-items:start}
+.sheet-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:14px;padding:14px 16px;align-items:start}
 @media (max-width:980px){.sheet-grid{grid-template-columns:1fr}}
 .viewer{position:sticky;top:64px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:10px}
 @media (max-width:980px){.viewer{position:static}}
@@ -105,6 +105,21 @@ table.its tr.flag td:first-child{box-shadow:inset 4px 0 0 var(--bad);color:var(-
 .lightbox img{max-width:100%;height:auto;cursor:zoom-in;background:#fff}
 .lightbox.zoom img{max-width:none;width:220%;cursor:zoom-out}
 .lightbox .close{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));z-index:2}
+.ref{display:block;font-size:.7rem;color:var(--muted);margin-top:3px;font-family:var(--f-mono)}
+.ref .dl{background:var(--wait-bg);color:var(--wait);border-radius:3px;padding:0 4px;font-family:var(--f-body);font-weight:600;margin-right:4px}
+.ref .div{color:var(--warn);font-weight:600}
+.cval{display:flex;gap:4px;align-items:center;font-size:.7rem;color:var(--muted);margin-top:3px;white-space:nowrap}
+.cval input{width:15px;height:15px;min-height:0}
+td.ck{text-align:center}
+table.its td:nth-child(3) input{min-width:118px}
+table.its td:nth-child(5) input{min-width:96px}
+table.its td:nth-child(8) input{min-width:110px}
+td.ck input{width:18px;height:18px;min-height:0}
+.st-it{display:inline-block;font-size:.66rem;font-weight:600;padding:3px 6px;border-radius:4px;white-space:nowrap}
+.cob-list{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.cob-list li{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:.86rem;border-bottom:1px solid var(--line);padding-bottom:6px}
+.cob-mail{display:grid;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
+.cob-mail pre{margin:0;white-space:pre-wrap;font:inherit;font-size:.84rem;max-height:280px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px}
 /* cadastros */
 .cad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:start}
 @media (max-width:860px){.cad{grid-template-columns:1fr}}
@@ -230,8 +245,26 @@ table.its tr.flag td:first-child{box-shadow:inset 4px 0 0 var(--bad);color:var(-
       </div>
       <div class="box">
         <div style="display:flex;align-items:center;gap:8px"><h4 class="grow">Itens <span class="code" id="dCount"></span></h4><button class="btn small" type="button" id="btnAddIt">+ Item</button></div>
-        <div class="it-wrap"><table class="its"><thead><tr><th>#</th><th style="width:34%">Descrição</th><th>TAG</th><th>Certificado</th><th>Und</th><th>Qtd</th><th>Local</th><th>Status</th><th></th></tr></thead><tbody id="dItens"></tbody></table></div>
+        <div class="it-wrap"><table class="its"><thead><tr><th>#</th><th style="width:30%">Descrição</th><th>TAG</th><th title="Exige certificado">Exige cert.</th><th>Certificado</th><th>Und</th><th>Qtd</th><th>Local</th><th>Inspeção</th><th>Situação</th><th></th></tr></thead><tbody id="dItens"></tbody></table></div>
         <p class="hint" id="dZero" hidden>Itens com quantidade 0 no romaneio aparecem apagados e não entram na ficha nem no mapa.</p>
+      </div>
+      <div class="box" id="cobBox" hidden>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h4 class="grow">Cobrança de certificados</h4><span class="pill" id="cobPill"></span></div>
+        <ul class="cob-list" id="cobLista"></ul>
+        <p class="hint" id="cobDest"></p>
+        <div class="actions" style="justify-content:flex-start"><button class="btn small" type="button" id="btnCobVer">Ver e-mail de cobrança</button></div>
+        <div class="cob-mail" id="cobMail" hidden>
+          <div class="f"><span class="lbl">Para</span><span class="code" id="cobPara" style="overflow-wrap:anywhere"></span></div>
+          <div class="f"><span class="lbl">Assunto</span><span id="cobAssunto"></span></div>
+          <pre id="cobCorpo"></pre>
+          <div class="actions" style="justify-content:flex-start">
+            <button class="btn small" type="button" id="btnCobCopiar">Copiar e-mail</button>
+            <a class="btn small" id="btnCobOutlook" href="#" target="_blank" rel="noopener">Abrir no Outlook</a>
+            <span class="sp"></span>
+            <button class="btn primary small" type="button" id="btnCobReg">Registrar envio</button>
+          </div>
+          <p class="hint">O envio automático entra na etapa 5. Até lá, envie pelo Outlook e toque em <b>Registrar envio</b>: o app guarda no histórico e não cobra de novo os mesmos itens.</p>
+        </div>
       </div>
       <div class="box">
         <h4>Observação</h4>
@@ -363,19 +396,26 @@ function renderItens(){
   const und=A.UNIDADES.map(u=>`<option>${u}</option>`).join("");
   $("dItens").innerHTML=edItens.map((it,i)=>{const zero=ed.tipo==="ROM"&&it.qtd!==""&&Number(it.qtd)===0;
     const flag=A.conf(ed).situacao==="devolvida"&&(A.conf(ed).itens||[]).includes(i);
+    const ex=A.exigeCert(ed,it),st=A.statusItem({...ed,itens:edItens},it),S=A.STATUS_ITEM[st];
+    const divU=it.undPedido&&A.norm(it.undPedido)!==A.norm(it.und);
+    const ref=it.pc?`<span class="ref">${it.origem==="diligenciamento"?'<span class="dl" title="Preenchido pela planilha de Diligenciamento">Dilig.</span>':""}PC ${esc(it.pc)}/${esc(it.itemPc)}${it.qtdPedido!==undefined&&it.qtdPedido!==""?` · pedido ${A.fmtQtd(it.qtdPedido)} ${esc(it.undPedido||"")}`:""}${divU?' <span class="div">· unidade diferente do pedido</span>':""}</span>`:"";
     return `<tr class="${zero?"zero":""}${flag?" flag":""}" data-i="${i}"><td class="code">${i+1}</td>
-    <td><input data-k="descricao" value="${esc(it.descricao)}" aria-label="Descrição"></td>
+    <td><input data-k="descricao" value="${esc(it.descricao)}" aria-label="Descrição">${ref}</td>
     <td><input data-k="tag" value="${esc(it.tag)}" aria-label="TAG"></td>
-    <td><input data-k="certificado" value="${esc(ed.tipo==="ROM"&&!it.certificado?"":it.certificado)}" placeholder="${ed.tipo==="ROM"?"OBS 1":""}" aria-label="Certificado"></td>
-    <td><select data-k="und" aria-label="Unidade">${und}</select></td>
+    <td class="ck">${ed.tipo==="NF"?`<input type="checkbox" data-ex="${i}" ${ex?"checked":""} aria-label="Exige certificado">`:'<span class="hint">—</span>'}</td>
+    <td><input data-k="certificado" value="${esc(ed.tipo==="ROM"&&!it.certificado?"":it.certificado)}" placeholder="${ed.tipo==="ROM"?"OBS 1":ex?"pendente":"não exige"}" aria-label="Certificado">${ex&&it.certificado?`<label class="cval"><input type="checkbox" data-val="${i}" ${it.certValidado?"checked":""}>validado pela Qualidade</label>`:""}</td>
+    <td><select data-k="und" aria-label="Unidade">${A.UNIDADES.includes(it.und)?"":`<option>${esc(it.und)}</option>`}${und}</select></td>
     <td><input data-k="qtd" type="number" step="any" min="0" value="${esc(it.qtd)}" style="width:80px" aria-label="Quantidade"></td>
     <td><input data-k="local" value="${esc(it.local)}" aria-label="Local"></td>
-    <td><select data-k="conf" aria-label="Status do item"><option value="C">C</option><option value="NC">NC</option><option value="NA">N/A</option></select></td>
+    <td><select data-k="conf" aria-label="Inspeção do item"><option value="C">C</option><option value="NC">NC</option><option value="NA">N/A</option></select></td>
+    <td><span class="st-it pill ${S.cls}">${S.rotulo}</span></td>
     <td><button class="del" type="button" data-del="${i}" aria-label="Remover item">×</button></td></tr>`}).join("");
   $("dItens").querySelectorAll("tr").forEach(tr=>{const i=+tr.dataset.i;
     tr.querySelector('[data-k="und"]').value=edItens[i].und||"UND";tr.querySelector('[data-k="conf"]').value=edItens[i].conf||"C";
-    tr.querySelectorAll("[data-k]").forEach(inp=>inp.addEventListener("change",()=>{const k=inp.dataset.k;edItens[i][k]=k==="qtd"?(inp.value===""?"":Number(inp.value)):(["descricao","tag","local"].includes(k)?inp.value.toUpperCase():inp.value);if(k==="qtd"||k==="certificado")renderItens();avisos()}));
+    tr.querySelectorAll("[data-k]").forEach(inp=>inp.addEventListener("change",()=>{const k=inp.dataset.k;edItens[i][k]=k==="qtd"?(inp.value===""?"":Number(inp.value)):(["descricao","tag","local"].includes(k)?inp.value.toUpperCase():inp.value);if(k==="certificado")edItens[i].certValidado=false;if(k==="qtd"||k==="certificado"||k==="conf")renderItens();avisos()}));
     tr.querySelector("[data-del]").onclick=()=>{edItens.splice(i,1);renderItens();avisos()};
+    const ex=tr.querySelector("[data-ex]");if(ex)ex.onchange=()=>{edItens[i].exigeCertificado=ex.checked;renderItens();avisos()};
+    const va=tr.querySelector("[data-val]");if(va)va.onchange=()=>{edItens[i].certValidado=va.checked;renderItens();avisos()};
   });
   const v=A.itensValidos({...ed,itens:edItens}).length;
   $("dCount").textContent=`· ${v} na ficha${v>15?" ("+Math.ceil(v/15)+" folhas)":""}`;
@@ -392,16 +432,55 @@ function coletar(){
 function avisos(){
   if(!ed)return;const f=coletar(),d=A.duplicada(f,fichas);
   $("dDup").hidden=!d;if(d)$("dDup").textContent=A.msgDuplicada(f,d);
-  const sem=f.tipo==="NF"&&A.itensValidos(f).some(i=>!i.certificado);
-  $("dCert").hidden=!sem;if(sem){const dest=A.destinatariosCertPendente(f);$("dCert").textContent=`Item sem certificado. ${f.status!=="cert_pendente"&&f.status!=="sem_acao"?"Considere o status Certificado pendente. ":""}Aviso por e-mail (etapa 5) iria para ${dest.length?dest.length+" destinatário(s)":"ninguém ainda: cadastre o fornecedor e os grupos em Cadastros"}.`}
+  const pend=A.pendencias(f),sem=pend.includes("certificado"),val=pend.includes("validar certificado");
+  $("dCert").hidden=!(sem||val);
+  if(sem||val)$("dCert").textContent=[sem?`${A.semCertificado(f).length} item(ns) exigem certificado e estão sem ele.${f.status!=="cert_pendente"&&f.status!=="sem_acao"?" Considere o status Certificado pendente.":""}`:"",val?"Há certificado vinculado aguardando validação da Qualidade.":""].filter(Boolean).join(" ");
+  renderCobranca(f);
   $("btnSalvar").disabled=!!d;
 }
 ["dNf","dForn","dRom"].forEach(id=>$(id).addEventListener("input",avisos));
 $("btnSalvar").onclick=async()=>{
   const f=coletar();
-  if(f.status==="finalizado"&&f.tipo==="NF"&&A.itensValidos(f).some(i=>!i.certificado)){toast("Não dá para finalizar com item sem certificado. Use Certificado pendente.",true);return}
+  if(f.status==="finalizado"&&A.pendencias(f).includes("certificado")){toast("Não dá para finalizar com item sem certificado obrigatório. Use Certificado pendente.",true);return}
+  if(f.status==="finalizado"&&A.pendencias(f).includes("validar certificado")){toast("Valide os certificados (coluna Certificado) antes de finalizar.",true);return}
   if(f.status==="finalizado"&&A.conf(f).situacao!=="aprovada"){toast("Aprove a conferência antes de finalizar.",true);return}
-  try{await A.store.salvar(f);toast("Ficha "+f.numero+" salva");fechar()}catch(e){toast(e.message||"Não foi possível salvar.",true)}
+  const orig=fichas.find(x=>x.id===f.id),oi=orig?.itens||[];let g=f;
+  const vinc=edItens.map((it,n)=>it.certificado&&it.certificado!==oi[n]?.certificado?n+1:0).filter(Boolean);
+  const vali=edItens.map((it,n)=>it.certValidado&&!oi[n]?.certValidado?n+1:0).filter(Boolean);
+  if(vinc.length)g=A.registrar(g,"cert_vinculado",{por:"Qualidade",itensTxt:vinc.join(", ")});
+  if(vali.length)g=A.registrar(g,"cert_validado",{por:"Qualidade",itensTxt:vali.join(", ")});
+  try{await A.store.salvar(g);toast("Ficha "+f.numero+" salva");fechar()}catch(e){toast(e.message||"Não foi possível salvar.",true)}
+};
+/* cobrança de certificados (ponto 5) */
+let cobEmail=null;
+function renderCobranca(f){
+  const box=$("cobBox");if(f.tipo!=="NF"){box.hidden=true;return}
+  const sem=A.semCertificado(f),pend=A.pendentesDeCobranca(f),ja=new Set(sem.filter(x=>!pend.includes(x)).map(x=>x.k));
+  box.hidden=!sem.length&&!(f.cobrancas||[]).length;if(box.hidden)return;
+  const ult=(f.cobrancas||[]).at(-1);
+  $("cobPill").className="pill "+(pend.length?"cert_pendente":"finalizado");
+  $("cobPill").textContent=pend.length?`${pend.length} a cobrar`:sem.length?"Todos já cobrados":"Sem pendências";
+  $("cobLista").innerHTML=sem.length?sem.map(x=>`<li><span class="code">Item ${x.n+1}</span><span>${esc(x.i.tag)} · ${esc(x.i.descricao)}</span><span class="code">${A.fmtQtd(x.i.qtd)} ${esc(x.i.und)}</span>${ja.has(x.k)?`<span class="pill finalizado">Cobrado${ult?" em "+A.fmtData(ult.em):""}</span>`:'<span class="pill cert_pendente">A cobrar</span>'}</li>`).join(""):'<li class="hint">Nenhum item sem certificado.</li>';
+  const dest=A.destinatariosCertPendente(f);
+  $("cobDest").textContent=dest.length?`Destinatários: ${dest.length} (fornecedor + Suprimentos, Logística, Qualidade e Planejamento, conforme Cadastros).`:"Nenhum destinatário cadastrado. Cadastre os e-mails do fornecedor e dos grupos em Cadastros.";
+  $("btnCobVer").disabled=!pend.length;$("btnCobVer").textContent=pend.length?"Ver e-mail de cobrança":"Nada novo a cobrar";
+  if(!pend.length)$("cobMail").hidden=true;
+}
+$("btnCobVer").onclick=()=>{
+  const f=coletar(),pend=A.pendentesDeCobranca(f);if(!pend.length)return;
+  cobEmail=A.montarEmailCobranca(f,pend);
+  $("cobPara").textContent=cobEmail.para.join("; ")||"(sem destinatários cadastrados)";
+  $("cobAssunto").textContent=cobEmail.assunto;$("cobCorpo").textContent=cobEmail.corpo;
+  $("btnCobOutlook").href="mailto:"+encodeURIComponent(cobEmail.para.join(";")).replace(/%3B/g,";").replace(/%40/g,"@")+"?subject="+encodeURIComponent(cobEmail.assunto)+"&body="+encodeURIComponent(cobEmail.corpo);
+  $("cobMail").hidden=false;$("cobMail").scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+$("btnCobCopiar").onclick=async()=>{const t=`Para: ${cobEmail.para.join("; ")}\nAssunto: ${cobEmail.assunto}\n\n${cobEmail.corpo}`;
+  try{await navigator.clipboard.writeText(t);toast("E-mail copiado")}catch(e){const r=document.createRange();r.selectNodeContents($("cobCorpo"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Selecionei o texto: use Ctrl+C para copiar")}};
+$("btnCobReg").onclick=async()=>{
+  if(!cobEmail)return;let f=A.registrarCobranca(coletar(),cobEmail,"Qualidade");
+  if(f.status!=="cert_pendente"&&f.status!=="sem_acao"&&f.status!=="finalizado")f.status="cert_pendente";
+  try{await A.store.salvar(f);ed=JSON.parse(JSON.stringify(f));edItens=ed.itens;cobEmail=null;$("cobMail").hidden=true;renderConf();renderItens();avisos();
+    $("dStatus").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.s===ed.status));toast("Envio registrado no histórico")}catch(e){toast(e.message,true)}
 };
 $("btnExcluir").onclick=async()=>{const b=$("btnExcluir");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Toque de novo para excluir";return}await A.store.excluir(ed.id);toast("Ficha excluída");fechar()};
 
@@ -423,7 +502,7 @@ $("lbClose").onclick=()=>$("lb").hidden=true;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("lb").hidden){$("lb").hidden=true;e.stopImmediatePropagation()}},true);
 
 /* conferência */
-const ACOES={enviada:"Enviada pelo campo",reenviada:"Reenviada corrigida pelo campo",aprovada:"Conferência aprovada",devolvida:"Devolvida ao campo como inconforme"};
+const ACOES={enviada:"Enviada pelo campo",reenviada:"Reenviada corrigida pelo campo",aprovada:"Conferência aprovada",devolvida:"Devolvida ao campo como inconforme",anexos:"Documentos anexados",cert_vinculado:"Certificado vinculado",cert_validado:"Certificado validado",email:"Cobrança de certificado enviada"};
 function renderConf(){
   const c=A.conf(ed);
   $("dConf").className="pill "+(c.situacao==="aprovada"?"finalizado":c.situacao==="devolvida"?"bad":"em_andamento");
@@ -432,7 +511,7 @@ function renderConf(){
   $("dDevolInfo").hidden=c.situacao!=="devolvida";
   if(c.situacao==="devolvida")$("dDevolInfo").innerHTML=`<strong>Aguardando correção do campo.</strong> ${(c.motivos||[]).map(m=>esc(A.MOTIVOS[m]||m)).join(" · ")}${(c.itens||[]).length?` · itens ${c.itens.map(i=>i+1).join(", ")}`:""}${c.comentario?`<br>“${esc(c.comentario)}”`:""}`;
   const h=(c.historico||[]).slice().reverse();
-  $("dHist").innerHTML=h.length?h.map(ev=>`<li><span class="when">${A.fmtData(ev.em)}</span><span><strong>${ACOES[ev.acao]||ev.acao}</strong>${ev.por?" · "+esc(ev.por):""}${ev.motivos&&ev.motivos.length?"<br>"+ev.motivos.map(m=>esc(A.MOTIVOS[m]||m)).join(" · "):""}${ev.comentario?"<br>“"+esc(ev.comentario)+"”":""}</span></li>`).join(""):'<li class="hint">Sem registros.</li>';
+  $("dHist").innerHTML=h.length?h.map(ev=>`<li><span class="when">${A.fmtData(ev.em)}</span><span><strong>${ACOES[ev.acao]||ev.acao}</strong>${ev.por?" · "+esc(ev.por):""}${ev.motivos&&ev.motivos.length?"<br>"+ev.motivos.map(m=>esc(A.MOTIVOS[m]||m)).join(" · "):""}${ev.comentario?"<br>“"+esc(ev.comentario)+"”":""}${ev.itensTxt?"<br>Itens "+esc(ev.itensTxt):""}${ev.acao==="email"?`<br>${ev.qtd} item(ns) · ${ev.para} destinatário(s)`:""}${ev.acao==="anexos"?`<br>${esc(ev.txt||"")}`:""}</span></li>`).join(""):'<li class="hint">Sem registros.</li>';
 }
 $("btnAprovar").onclick=async()=>{
   const f=A.marcarConferencia(coletar(),"aprovada",{por:"Qualidade"});
@@ -464,7 +543,7 @@ function renderCad(){
   $("fichaIni").value=cad.fichaInicial;
   $("proxFicha").textContent="Próxima ficha: Nº "+A.proximoNumero(fichas,cad.fichaInicial);
   $("grupos").innerHTML=Object.entries(A.GRUPOS).map(([k,l])=>`<div class="f"><label for="g_${k}">${l} <span class="code">(${cad.grupos[k].length})</span></label><textarea id="g_${k}" rows="2" placeholder="nome@milplan.com.br">${esc(cad.grupos[k].join("\n"))}</textarea></div>`).join("")+`<div><button class="btn small" type="button" id="btnGrupos">Salvar grupos</button></div>`;
-  $("btnGrupos").onclick=async()=>{try{for(const k of Object.keys(A.GRUPOS))await A.cadastros.salvarGrupo(k,$("g_"+k).value.split(/[\n,;]+/));toast("Grupos salvos")}catch(e){toast(e.message,true)}};
+  $("btnGrupos").onclick=async()=>{const v=Object.fromEntries(Object.keys(A.GRUPOS).map(k=>[k,$("g_"+k).value.split(/[\n,;]+/)]));try{for(const k of Object.keys(v)){const bad=v[k].map(x=>x.trim()).filter(Boolean).find(x=>!A.emailOk(x));if(bad)throw new Error("E-mail inválido em "+A.GRUPOS[k]+": "+bad)}for(const k of Object.keys(v))await A.cadastros.salvarGrupo(k,v[k]);toast("Grupos salvos")}catch(e){toast(e.message,true)}};
   const q=A.norm($("qForn").value);
   const l=cad.fornecedores.filter(f=>!q||A.norm(f.nome+" "+f.cnpj).includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
   $("fornList").innerHTML=l.length?l.map(f=>`<div class="forn"><div class="top"><b>${esc(f.nome)}</b>${f.cnpj?`<span class="code">${esc(f.cnpj)}</span>`:""}${f.codigoErp?`<span class="code">cód. ${esc(f.codigoErp)}</span>`:""}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}<span class="grow"></span><button class="btn ghost small" type="button" data-fo="${f.id}">Editar</button></div><div class="em">${f.emails.length?esc(f.emails.join(" · ")):'<span style="color:var(--warn)">Sem e-mail cadastrado</span>'}</div></div>`).join(""):`<div class="empty" style="padding:16px">Nenhum fornecedor${q?" encontrado":" cadastrado"}.</div>`;

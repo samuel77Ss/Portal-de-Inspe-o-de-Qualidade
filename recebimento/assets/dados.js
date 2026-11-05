@@ -20,7 +20,7 @@
   };
   const ORDEM_STATUS = ["sem_acao", "em_andamento", "cert_pendente", "finalizado"];
   const CONF = { C: "Conforme", NC: "Não conforme", NA: "Não se aplica" };
-  const UNIDADES = ["PÇ", "UND", "M", "KG", "GL", "LT", "CJ", "M²", "M³", "VB", "TB", "SC", "RL", "BR"];
+  const UNIDADES = ["PÇ", "PC", "UND", "UN", "M", "KG", "GL", "LT", "L", "CJ", "PAR", "CX", "M²", "M³", "M3", "VB", "TB", "SC", "RL", "BR", "PT"];
   const MOTIVOS = {
     foto: "Foto ilegível ou incompleta",
     doc_divergente: "Dados do documento divergentes (nº, fornecedor, data)",
@@ -84,10 +84,48 @@
   function itensValidos(f) {
     return (f.itens || []).filter(i => (i.descricao || i.tag) && !(f.tipo === "ROM" && Number(i.qtd) === 0));
   }
+  /* Exige certificado? Valor do item, ou regra: NF + material de obra (código MT ou sem código) */
+  function exigeCert(f, i) {
+    if (f.tipo !== "NF") return false;
+    if (typeof i.exigeCertificado === "boolean") return i.exigeCertificado;
+    return !i.tag || /^MT/i.test(String(i.tag).trim());
+  }
+  const STATUS_ITEM = {
+    nao_conforme: { rotulo: "Não conforme", cls: "bad" },
+    cert_pendente: { rotulo: "Certificado pendente", cls: "cert_pendente" },
+    cert_a_validar: { rotulo: "Certificado a validar", cls: "em_andamento" },
+    aguardando: { rotulo: "Aguardando conferência", cls: "sem_acao" },
+    conforme: { rotulo: "Conforme", cls: "finalizado" }
+  };
+  function statusItem(f, i) {
+    if (i.conf === "NC") return "nao_conforme";
+    if (exigeCert(f, i) && !i.certificado) return "cert_pendente";
+    if (exigeCert(f, i) && !i.certValidado) return "cert_a_validar";
+    if (conf(f).situacao !== "aprovada") return "aguardando";
+    return "conforme";
+  }
+  /* Itens que exigem certificado e estão sem ele */
+  const chaveItem = (i, n) => i.pc && i.itemPc ? `PC${i.pc}/${i.itemPc}` : `#${n + 1}|${norm(i.tag)}|${norm(i.descricao).slice(0, 40)}`;
+  function semCertificado(f) { return itensValidos(f).map((i, n) => ({ i, n, k: chaveItem(i, n) })).filter(x => exigeCert(f, x.i) && !x.i.certificado); }
+  function cobrados(f) { return new Set((f.cobrancas || []).flatMap(c => c.itens || [])); }
+  function pendentesDeCobranca(f) { const c = cobrados(f); return semCertificado(f).filter(x => !c.has(x.k)); }
+  function montarEmailCobranca(f, lista) {
+    const para = destinatariosCertPendente(f);
+    const assunto = `Certificado de qualidade pendente - NF ${f.nf} - ${f.fornecedor} - Ficha ${f.numero}`;
+    const linhas = lista.map(({ i, n }) => `- Item ${n + 1}: ${i.tag || "(sem código)"} - ${i.descricao}\n  Quantidade: ${fmtQtd(i.qtd)} ${i.und}${i.pc ? `  |  Pedido ${i.pc}/${i.itemPc}` : ""}\n  Pendência: certificado de qualidade não enviado`);
+    const corpo = `Prezados,\n\nNo recebimento de materiais do Projeto Flotação Recleaner (contrato ${CONTRATO}), os itens abaixo chegaram sem o certificado de qualidade.\n\nNota fiscal: ${f.nf}${f.serie ? " (série " + f.serie + ")" : ""}\nFornecedor: ${f.fornecedor}\nData do recebimento: ${fmtData(f.dataRecebimento)}\nFicha de recebimento: ${f.numero}\n\nItens pendentes:\n${linhas.join("\n")}\n\nSolicitamos o envio dos certificados de qualidade pendentes, identificando o número da NF e o item a que cada um se refere.\n\nAtenciosamente,\nQualidade - Milplan Engenharia\nProjeto AMR / Flotação Recleaner`;
+    return { para, assunto, corpo, itens: lista.map(x => x.k) };
+  }
+  function registrarCobranca(f, email, por) {
+    const reg = { em: new Date().toISOString(), por: por || "", para: email.para, itens: email.itens, assunto: email.assunto };
+    const g = { ...f, cobrancas: [...(f.cobrancas || []), reg] };
+    return marcarConferencia(g, "email", { por: por || "", qtd: email.itens.length, para: email.para.length });
+  }
   function pendencias(f) {
     const p = [];
     if (!itensValidos(f).length) p.push("sem itens");
-    if (f.tipo === "NF" && itensValidos(f).some(i => !i.certificado)) p.push("certificado");
+    if (itensValidos(f).some(i => exigeCert(f, i) && !i.certificado)) p.push("certificado");
+    if (itensValidos(f).some(i => exigeCert(f, i) && i.certificado && !i.certValidado)) p.push("validar certificado");
     if (itensValidos(f).some(i => i.conf === "NC")) p.push("não conformidade");
     return p;
   }
@@ -121,8 +159,15 @@
       ["TINTA PU - WEGTHANE HPA 501 RT CINZA N5 - 24 LT 3,6L - COM FDS E CERTIFICADO DE QUALIDADE", "MT08010024", "GL", 24, "3023652"],
       ["CATALISADOR TINTA - W THANE 5058 COMP B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "LT", 24, "3023652"],
       ["TINTA PU - LACK THANE N 2677R AZUL 2,5 PB 5/8 - 8LT 3,6L COM FDS E CERTIFICADO DE QUALIDADE", "MT08010024", "GL", 8, "3023648"],
-      ["CATALISADOR TINTA - W THANE 5013 COMP B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "LT", 8, ""]
-    ].map(([descricao, tag, und, qtd, certificado]) => ({ descricao, tag, und, qtd, certificado, local: "ALMOXARIFADO", conf: "C" }));
+      ["CATALISADOR TINTA - W THANE 5013 COMP B - COM FDS E CERTIFICADO DE QUALIDADE", "MT08020001", "LT", 8, "3023647"]
+    ].map(([descricao, tag, und, qtd, certificado], n) => ({ descricao, tag, und, qtd, certificado, certValidado: true, local: "ALMOXARIFADO", conf: "C",
+      pc: "004166", itemPc: String(n + 1).padStart(4, "0"), qtdPedido: [43.2, 12, 86.4, 24, 28.8, 8][n], undPedido: ["L", "UN", "L", "UN", "L", "UN"][n], origem: "diligenciamento" }));
+    const pendItens = [
+      ["FLANGE DE ENCAIXE 4\" 150# ASME B16.5 - COM CERTIFICADO DE QUALIDADE", "MT09030040", "UN", 12, "14401", true],
+      ["FLANGE DE ENCAIXE 3\" 150# ASME B16.5 - COM CERTIFICADO DE QUALIDADE", "MT09030041", "UN", 10, "", false],
+      ["VÁLVULA ESFERA AÇO CARBONO 1 1/2\" NPT", "MT09030026", "PC", 2, "", false],
+      ["LUVA DE SEGURANÇA VAQUETA", "ES01020011", "PAR", 20, "", false]
+    ].map(([descricao, tag, und, qtd, certificado, val], n) => ({ descricao, tag, und, qtd, certificado, certValidado: val, local: "ALMOXARIFADO", conf: "C", pc: "000999", itemPc: String(n + 1).padStart(4, "0"), qtdPedido: qtd, undPedido: und, origem: "diligenciamento" }));
     const romItens = [
       ["CHAPA DE PISO - C-1501-C-54-A-1597", "5858-0415-1458 B1", 1],
       ["VIGA - C-1751-C-255-A-203", "5858-0415-1439 A1", 7],
@@ -134,12 +179,13 @@
     ].map(([descricao, tag, qtd]) => ({ descricao, tag, und: "PÇ", qtd, certificado: "", local: "PLATÔ-13", conf: "C" }));
     return [
       { id: "ex-1609", exemplo: true, numero: 1609, tipo: "NF", nf: "10990", serie: "1", cnpjFornecedor: "60.621.141/0007-49", chaveNFe: "31260860621141000749550010000109901797053194", romaneio: "4166-REV-00", pedido: "004166", fornecedor: "WEG TINTAS", fornecimento: "MILPLAN ENGENHARIA", dataRecebimento: "2026-08-15", status: "finalizado", itens: nfItens, observacao: "", assinaturas: { producao: { em: "2026-08-19" }, qualidade: { em: "2026-08-19" }, fiscalizacao: { em: "2026-10-14" } }, anexos: { doc: anexo("nf", "DANFE NF 10990"), cert: anexo("cert", "Certificado 3023651") }, conferencia: { situacao: "aprovada", historico: [{ acao: "enviada", em: "2026-08-15T12:00:00Z", por: "Campo" }, { acao: "aprovada", em: "2026-08-16T12:00:00Z", por: "Qualidade" }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t },
+      { id: "ex-2289", exemplo: true, numero: 2289, tipo: "NF", nf: "123456", serie: "1", romaneio: "999-REV-00", pedido: "000999", fornecedor: "FORNECEDOR EXEMPLO LTDA", fornecimento: "MILPLAN ENGENHARIA", dataRecebimento: hoje(), status: "cert_pendente", itens: pendItens, observacao: "", assinaturas: {}, anexos: { doc: [], cert: [] }, conferencia: { situacao: "pendente", historico: [{ acao: "enviada", em: t, por: "Campo" }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t },
       { id: "ex-2290", exemplo: true, numero: 2290, tipo: "ROM", nf: "", romaneio: "1039-FLT-2026", pedido: "", fornecedor: "ANGLO AMERICAN", fornecimento: "ANGLO AMERICAN", dataRecebimento: hoje(), status: "em_andamento", itens: romItens, observacao: OBS_ANGLO, assinaturas: {}, anexos: { doc: anexo("rom", "Romaneio 1039-FLT-2026"), cert: [] }, conferencia: { situacao: "devolvida", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar.", historico: [{ acao: "enviada", em: t, por: "Campo" }, { acao: "devolvida", em: t, por: "Qualidade", motivos: ["qtd"], itens: [5], comentario: "Item 6: no romaneio a quantidade entregue está 01 e foi lançado 0. Corrigir e reenviar." }] }, origem: "campo", criadoPor: "Exemplo", criadoEm: t, atualizadoEm: t }
     ];
   }
 
   /* ---------- Armazenamento local (etapa 1) ---------- */
-  const KEY = "amr_recebimento_fichas_v3";
+  const KEY = "amr_recebimento_fichas_v4";
   const ouvintes = new Set();
   let cache = null;
   function ler() {
@@ -182,7 +228,7 @@
 
   /* ---------- Cadastros: fornecedores e grupos de e-mail ---------- */
   const KEY_CAD = "amr_recebimento_cadastros_v2";
-  const GRUPOS = { suprimentos: "Suprimentos", logistica: "Logística", qualidade: "Qualidade" };
+  const GRUPOS = { suprimentos: "Suprimentos", logistica: "Logística", qualidade: "Qualidade", planejamento: "Planejamento" };
   const ouvCad = new Set();
   let cad = null;
   function lerCad() {
@@ -190,9 +236,10 @@
     try { const s = localStorage.getItem(KEY_CAD); cad = s ? JSON.parse(s) : null; } catch (e) { cad = null; }
     if (!cad) {
       cad = { fornecedores: [{ id: "weg", nome: "WEG TINTAS", cnpj: "60.621.141/0007-49", codigoErp: "222796", emails: [], exemplo: true }],
-              grupos: { suprimentos: [], logistica: [], qualidade: [] }, fichaInicial: FICHA_INICIAL };
+              grupos: { suprimentos: [], logistica: [], qualidade: [], planejamento: [] }, fichaInicial: FICHA_INICIAL };
       gravarCad();
     }
+    cad.grupos = cad.grupos || {}; Object.keys(GRUPOS).forEach(k => { cad.grupos[k] = cad.grupos[k] || []; });
     return cad;
   }
   function gravarCad() { try { localStorage.setItem(KEY_CAD, JSON.stringify(cad)); } catch (e) { } }
@@ -226,9 +273,9 @@
   function destinatariosCertPendente(f) {
     if (f.tipo !== "NF") return [];
     const c = lerCad(), fo = cadastros.fornecedorPorNome(f.fornecedor);
-    return [...new Set([...(fo?.emails || []), ...c.grupos.suprimentos, ...c.grupos.logistica, ...c.grupos.qualidade])];
+    return [...new Set([...(fo?.emails || []), ...Object.keys(GRUPOS).flatMap(k => c.grupos[k] || [])])];
   }
 
-  window.AMR = { lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();
