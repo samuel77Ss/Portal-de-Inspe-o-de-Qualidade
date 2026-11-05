@@ -84,11 +84,33 @@
   function itensValidos(f) {
     return (f.itens || []).filter(i => (i.descricao || i.tag) && !(f.tipo === "ROM" && Number(i.qtd) === 0));
   }
-  /* Exige certificado? Valor do item, ou regra: NF + material de obra (código MT ou sem código) */
+  /* ---------- Materiais críticos (CMC) — exigem certificado de qualidade ----------
+     Fonte: CMC-MIL-0002 (Mecânica), 447.QUA.FP-40 Rev.00, de 06/03/2026.
+     Legenda: W testemunho opcional · R verificação da documentação · H hold point · A inspeção 100%
+              C inspeção de produto · D verificação dimensional · V exame visual · M inspeção por amostragem */
+  const CMC = [
+    { id: "chumbador", rotulo: "Chumbador", tipo: "Barra roscada / tipo J / químico", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R", cliente: "W, R",
+      re: [/CHUMBADOR|BARRA ROSCADA|ANCORAGEM QUIMICA|ADESIVO.{0,20}ANCORAGEM/] },
+    { id: "solda", rotulo: "Consumível de soldagem", tipo: "Eletrodo, arame e vareta", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R, M", cliente: "W, R",
+      re: [/^ELETRODO\b/, /^ARAME (TUBULAR|MIG|MAG|DE SOLDA|SOLDA|SOLIDO)/, /^ARAME\b.*\b(ER ?70|E ?71|AWS)/, /^VARETA\b/] },
+    { id: "fixacao", rotulo: "Elemento de fixação", tipo: "Alta resistência", doc: "CMC-MIL-0002", setor: "R, C, V", cq: "C, R, M", cliente: "W, R",
+      re: [/^(PARAFUSO|PORCA|ARRUELA|ESTOJO|PRISIONEIRO)\b.*(ALTA RESIST|A ?325|A ?490|A ?193|A ?194|\bB7\b|\b2H\b|\b8\.8\b|\b10\.9\b|F ?1852|GRAU ?8|GR\.? ?8\b)/] },
+    { id: "tintas", rotulo: "Tinta", tipo: "Látex, acrílica, esmalte, epóxi, diluente", doc: "CMC-MIL-0002", setor: "R", cq: "C, R, M", cliente: "W, R",
+      re: [/^(TINTA|CATALISADOR (DE )?TINTA|LATEX|ESMALTE|DILUENTE|THINNER|PRIMER|VERNIZ)\b/] }
+  ];
+  const LEGENDA_CMC = { W: "Testemunho opcional", R: "Verificação da documentação", H: "Hold point (teste exigido)", A: "Inspeção 100%", C: "Inspeção de produto", D: "Verificação dimensional", V: "Exame visual", M: "Inspeção por amostragem", NA: "Não se aplica" };
+  const semAcento = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+  function materialCritico(descricao, codigo) {
+    const c = String(codigo || "").trim().toUpperCase();
+    if (c && !/^MT/.test(c)) return null;
+    const d = semAcento(descricao);
+    return CMC.find(g => g.re.some(r => r.test(d))) || null;
+  }
+  /* Exige certificado? Valor marcado no item, ou: NF + material crítico do CMC */
   function exigeCert(f, i) {
     if (f.tipo !== "NF") return false;
     if (typeof i.exigeCertificado === "boolean") return i.exigeCertificado;
-    return !i.tag || /^MT/i.test(String(i.tag).trim());
+    return !!materialCritico(i.descricao, i.tag);
   }
   const STATUS_ITEM = {
     nao_conforme: { rotulo: "Não conforme", cls: "bad" },
@@ -163,9 +185,10 @@
     ].map(([descricao, tag, und, qtd, certificado], n) => ({ descricao, tag, und, qtd, certificado, certValidado: true, local: "ALMOXARIFADO", conf: "C",
       pc: "004166", itemPc: String(n + 1).padStart(4, "0"), qtdPedido: [43.2, 12, 86.4, 24, 28.8, 8][n], undPedido: ["L", "UN", "L", "UN", "L", "UN"][n], origem: "diligenciamento" }));
     const pendItens = [
-      ["FLANGE DE ENCAIXE 4\" 150# ASME B16.5 - COM CERTIFICADO DE QUALIDADE", "MT09030040", "UN", 12, "14401", true],
-      ["FLANGE DE ENCAIXE 3\" 150# ASME B16.5 - COM CERTIFICADO DE QUALIDADE", "MT09030041", "UN", 10, "", false],
-      ["VÁLVULA ESFERA AÇO CARBONO 1 1/2\" NPT", "MT09030026", "PC", 2, "", false],
+      ["PARAFUSO SEXTAVADO 3/4\" X 2.1/2\" ASTM A325 GALVANIZADO A FOGO", "MT02080003", "PÇ", 200, "CQ-88412", true],
+      ["ELETRODO E7018 4MM EMBALADO A VACUO", "MT02060005", "KG", 50, "", false],
+      ["CHUMBADOR QUIMICO 5/8\" X 7.5/8\"", "MT02040006", "PÇ", 24, "", false],
+      ["FLANGE DE ENCAIXE 3\" 150# ASME B16.5", "MT09030041", "UN", 10, "", false],
       ["LUVA DE SEGURANÇA VAQUETA", "ES01020011", "PAR", 20, "", false]
     ].map(([descricao, tag, und, qtd, certificado, val], n) => ({ descricao, tag, und, qtd, certificado, certValidado: val, local: "ALMOXARIFADO", conf: "C", pc: "000999", itemPc: String(n + 1).padStart(4, "0"), qtdPedido: qtd, undPedido: und, origem: "diligenciamento" }));
     const romItens = [
@@ -185,7 +208,7 @@
   }
 
   /* ---------- Armazenamento local (etapa 1) ---------- */
-  const KEY = "amr_recebimento_fichas_v4";
+  const KEY = "amr_recebimento_fichas_v5";
   const ouvintes = new Set();
   let cache = null;
   function ler() {
@@ -276,6 +299,6 @@
     return [...new Set([...(fo?.emails || []), ...Object.keys(GRUPOS).flatMap(k => c.grupos[k] || [])])];
   }
 
-  window.AMR = { exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();

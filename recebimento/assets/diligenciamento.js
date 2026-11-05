@@ -69,7 +69,9 @@
       if (vistos.has(k)) continue;
       vistos.add(k);
       reg.familia = familia(reg.codigo);
-      reg.pedeCertificado = reg.familia.certificado || /CERTIFICAD/i.test(reg.obs + " " + reg.descComp);
+      reg.critico = window.AMR && window.AMR.materialCritico ? window.AMR.materialCritico(reg.descricao + " - " + reg.descComp, reg.codigo) : null;
+      reg.pedeCertificado = window.AMR && window.AMR.materialCritico ? !!reg.critico : reg.familia.certificado;
+      reg.pedidoPedeCertificado = /CERTIFICAD/i.test(reg.obs + " " + reg.descComp);
       registros.push(reg);
     }
     return { aba: nomeAba, registros };
