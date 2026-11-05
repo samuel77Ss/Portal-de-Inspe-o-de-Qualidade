@@ -127,6 +127,7 @@
   /* Exige certificado? Valor marcado no item, ou: NF + material crítico do CMC */
   function exigeCert(f, i) {
     if (f.tipo !== "NF") return false;
+    if (i.certStatus === "nao_recebido") return true;
     if (typeof i.exigeCertificado === "boolean") return i.exigeCertificado;
     return !!materialCritico(i.descricao, i.tag);
   }

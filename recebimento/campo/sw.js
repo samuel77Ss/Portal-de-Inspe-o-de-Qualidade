@@ -1,5 +1,5 @@
 /* Guarda a estrutura do app para abrir mesmo sem sinal. Os dados seguem pelo banco. */
-const CACHE = "recebmais-v14";
+const CACHE = "recebmais-v15";
 const ARQS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "../assets/favicon.png", "../assets/marca-icone.png", "../assets/base.css", "../assets/vendor/html5-qrcode.min.js", "../assets/vendor/xlsx.mini.min.js", "../assets/vendor/msal-browser.min.js", "../assets/diligenciamento.js", "../assets/exemplo-docs.js", "../assets/dados.js", "../assets/atualizacao.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARQS)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

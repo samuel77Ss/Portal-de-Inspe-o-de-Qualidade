@@ -61,6 +61,7 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .certsec{display:grid;gap:10px;border:1px dashed var(--line);border-radius:8px;padding:10px;background:var(--surface)}
 .certsec.req{border-color:var(--warn)}
 .certsec.ok{border-color:var(--ok);border-style:solid}
+.certsec.nr{border-color:var(--bad);border-style:solid;background:var(--bad-bg)}
 .certsec .cs-h{display:flex;align-items:center;gap:8px;font:700 .8rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .certsec .cs-st{font-size:.78rem;font-weight:600}
 .certsec .shot-btns .btn{min-height:40px;font-size:.84rem}
@@ -340,14 +341,22 @@ $("btnNovoOutro").onclick=()=>abrirNovo(tipo);
 
 function certSecao(it,i){
   const cr=A.materialCritico(it.descricao,it.tag),ex=A.exigeCert({tipo},it),fotos=it.certAnexos||[];
-  const st=it.certificado||fotos.length?`<span class="cs-st" style="color:var(--ok)">✓ Certificado ${it.certificado?esc(it.certificado):""}${fotos.length?` · ${fotos.length} ${fotos.length===1?"arquivo":"arquivos"}`:""}</span>`
-    :ex?'<span class="cs-st" style="color:var(--warn)">Sem certificado: vai gerar cobrança ao fornecedor</span>':'<span class="cs-st" style="color:var(--muted)">Não exige certificado</span>';
-  return `<div class="certsec ${it.certificado||fotos.length?"ok":ex?"req":""}">
+  const tem=!!(it.certificado||fotos.length), nr=it.certStatus==="nao_recebido";
+  const estado=nr?"nao_recebido":(tem||it.certStatus==="recebido")?"recebido":"";
+  const st=nr?'<span class="cs-st" style="color:var(--bad)">✕ Certificado NÃO recebido · o fornecedor será cobrado</span>'
+    :tem?`<span class="cs-st" style="color:var(--ok)">✓ Certificado ${it.certificado?esc(it.certificado):""}${fotos.length?` · ${fotos.length} ${fotos.length===1?"arquivo":"arquivos"}`:""}</span>`
+    :estado==="recebido"?'<span class="cs-st" style="color:var(--warn)">Informe o nº ou anexe a foto do certificado</span>'
+    :ex?'<span class="cs-st" style="color:var(--warn)">Escolha: o certificado veio junto com o material?</span>':'<span class="cs-st" style="color:var(--muted)">Não exige certificado</span>';
+  return `<div class="certsec ${nr?"nr":tem?"ok":ex?"req":""}">
       <div class="cs-h">Certificado do item ${i+1}</div>
-      <label class="excert"><input type="checkbox" data-ex ${ex?"checked":""}><span>Exige certificado de qualidade${cr?`<br><span style="color:var(--warn);font-size:.78rem;font-weight:600">Material crítico (CMC): ${esc(cr.rotulo)} · CQ ${esc(cr.cq)}</span><br><span style="color:var(--muted);font-size:.76rem">${esc(cr.evidencia||"")}</span>`:""}${!cr&&it.pedidoPedeCertificado?`<br><span style="color:var(--muted);font-size:.78rem">O pedido de compra pede certificado</span>`:""}</span></label>
-      <div class="f"><label>Nº do certificado</label><input data-k="certificado" value="${esc(it.certificado)}" autocomplete="off" placeholder="${ex?"Ex.: 3023651":"Se houver"}"></div>
+      <label class="excert"><input type="checkbox" data-ex ${ex?"checked":""} ${nr?"disabled":""}><span>Exige certificado de qualidade${cr?`<br><span style="color:var(--warn);font-size:.78rem;font-weight:600">Material crítico (CMC): ${esc(cr.rotulo)} · CQ ${esc(cr.cq)}</span><br><span style="color:var(--muted);font-size:.76rem">${esc(cr.evidencia||"")}</span>`:""}${!cr&&it.pedidoPedeCertificado?`<br><span style="color:var(--muted);font-size:.78rem">O pedido de compra pede certificado</span>`:""}</span></label>
+      <div class="seg certseg" role="group" aria-label="Certificado do item ${i+1}">
+        <button type="button" data-cst="recebido" class="C" aria-pressed="${estado==="recebido"}">Recebido</button>
+        <button type="button" data-cst="nao_recebido" class="NC" aria-pressed="${nr}">Não recebido</button>
+      </div>
+      ${nr?"":`<div class="f"><label>Nº do certificado</label><input data-k="certificado" value="${esc(it.certificado)}" autocomplete="off" placeholder="${ex?"Ex.: 3023651":"Se houver"}"></div>
       <div class="shot-btns"><button class="btn" type="button" data-certfoto>Fotografar certificado</button><button class="btn" type="button" data-certarq>Galeria / PDF</button></div>
-      ${fotos.length?`<div class="thumbs">${fotos.map((f,k)=>`<figure>${f.pdf?`<div style="width:76px;height:96px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font:600 .75rem var(--f-mono);color:var(--muted)">PDF</div>`:`<img src="${f.img||f.thumb}" alt="Certificado ${k+1} do item ${i+1}">`}<button type="button" aria-label="Remover arquivo" data-rc="${k}">×</button></figure>`).join("")}</div>`:""}
+      ${fotos.length?`<div class="thumbs">${fotos.map((f,k)=>`<figure>${f.pdf?`<div style="width:76px;height:96px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font:600 .75rem var(--f-mono);color:var(--muted)">PDF</div>`:`<img src="${f.img||f.thumb}" alt="Certificado ${k+1} do item ${i+1}">`}<button type="button" aria-label="Remover arquivo" data-rc="${k}">×</button></figure>`).join("")}</div>`:""}`}
       ${st}
     </div>`;
 }
@@ -384,11 +393,16 @@ function renderItens(){
     const okb=el.querySelector("[data-okNF]");if(okb)okb.onclick=()=>{itens[i].conferirNF=false;renderItens()};
     el.querySelectorAll('[data-k="qtd"],[data-k="und"]').forEach(x=>x.addEventListener("change",()=>{if(itens[i].conferirNF){itens[i].conferirNF=false;renderItens()}}));
     const exb=el.querySelector("[data-ex]");if(exb)exb.onchange=()=>{itens[i].exigeCertificado=exb.checked;renderItens()};
-    const addCert=files=>lerFotos(files,itens[i].certAnexos=itens[i].certAnexos||[],()=>renderItens());
+    el.querySelectorAll("[data-cst]").forEach(b=>b.onclick=()=>{const v=b.dataset.cst;
+      if(v==="nao_recebido"){if(((itens[i].certAnexos||[]).length||itens[i].certificado)&&!b.dataset.ok){b.dataset.ok=1;toast("Este item tem certificado informado. Toque de novo para marcar como não recebido e apagar o certificado.",true);return}
+        itens[i].certificado="";itens[i].certAnexos=[];itens[i].certStatus="nao_recebido"}
+      else itens[i].certStatus="recebido";
+      renderItens()});
+    const addCert=files=>{itens[i].certStatus="recebido";lerFotos(files,itens[i].certAnexos=itens[i].certAnexos||[],()=>renderItens())};
     const cf=el.querySelector("[data-certfoto]");if(cf)cf.onclick=()=>escolherArquivo(true,addCert);
     const ca=el.querySelector("[data-certarq]");if(ca)ca.onclick=()=>escolherArquivo(false,addCert);
     el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{itens[i].certAnexos.splice(+b.dataset.rc,1);renderItens()});
-    const cinp=el.querySelector('[data-k="certificado"]');if(cinp)cinp.addEventListener("change",()=>renderItens());
+    const cinp=el.querySelector('[data-k="certificado"]');if(cinp)cinp.addEventListener("change",()=>{if(cinp.value.trim())itens[i].certStatus="recebido";renderItens()});
     const sb=el.querySelector("[data-scantag]");if(sb)sb.onclick=()=>abrirScanner("TAG do item "+(i+1),"Aponte para a etiqueta, código de barras ou QR code do material.",txt=>{itens[i].tag=A.norm(txt);renderItens();toast("TAG do item "+(i+1)+" preenchida")});
     const d=el.querySelector("[data-del]"); if(d)d.onclick=()=>{itens.splice(i,1);renderItens()};
   });
@@ -550,6 +564,10 @@ async function enviar(status){
   if(tipo==="ROM"&&!f.romaneio){toast("Informe o nº do romaneio.",true);$("romaneioA").focus();return}
   if(status==="em_andamento"&&!A.itensValidos(f).length){toast("Adicione pelo menos um item com descrição.",true);return}
   if(editando)status=editando.status==="sem_acao"?"em_andamento":(editando.status==="cert_pendente"?"em_andamento":editando.status);
+  if(tipo==="NF"&&status==="em_andamento"){
+    const indef=f.itens.map((it,n)=>({it,n})).filter(({it})=>(it.descricao||it.tag)&&A.exigeCert(f,it)&&!A.temCert(it)&&it.certStatus!=="nao_recebido");
+    if(indef.length){toast(`Item ${indef.map(x=>x.n+1).join(", ")}: anexe o certificado ou marque "Não recebido".`,true);$("itens").querySelector(`[data-i="${indef[0].n}"] .certsec`)?.scrollIntoView({behavior:"smooth",block:"center"});return}
+  }
   const naoConf=A.itensValidos(f).filter(i=>i.conferirNF).length;
   if(naoConf&&!enviar.avisado){enviar.avisado=true;toast(`${naoConf} item(ns) ainda não conferidos com a NF (quantidade e unidade). Confira ou toque em Enviar de novo.`,true);setTimeout(()=>enviar.avisado=false,8000);return}
   enviar.avisado=false;
@@ -558,6 +576,8 @@ async function enviar(status){
   if(semCert)f.status="cert_pendente";
   let fc=A.marcarConferencia(f,editando?"reenviada":"enviada",{por:"Campo"});
   const nd=(f.anexos?.doc||[]).length-((editando?.anexos?.doc)||[]).length,nc=(f.anexos?.cert||[]).length-((editando?.anexos?.cert)||[]).length;
+  const nrec=A.itensValidos(f).map((it,n)=>it.certStatus==="nao_recebido"?n+1:0).filter(Boolean);
+  if(nrec.length)fc=A.registrar(fc,"cert_nao_recebido",{por:"Campo",itensTxt:nrec.join(", ")});
   if(nd>0||nc>0)fc=A.registrar(fc,"anexos",{por:"Campo",txt:[nd>0?`${nd} foto(s) do documento`:"",nc>0?`${nc} certificado(s)`:""].filter(Boolean).join(" · ")});
   lembrarLocal($("localPadrao").value.trim().toUpperCase());
   try{const s=await A.store.salvar(fc);$("okNum").textContent=s.numero;$("okMsg").textContent=editando?"Correção reenviada para conferência do escritório":status==="sem_acao"?"Chegada registrada. Faça o recebimento quando puder.":semCert?"Enviado com certificado pendente. O escritório vai cobrar o fornecedor.":"Recebimento enviado para o escritório";$("okDoc").textContent=(tipo==="ROM"?"Romaneio ":"NF ")+(f.tipo==="ROM"?f.romaneio:f.nf)+" · "+A.itensValidos(f).length+" itens na ficha";editando=null;show("ok")}
