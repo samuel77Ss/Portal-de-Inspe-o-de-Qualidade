@@ -12,7 +12,7 @@
 /* Painel do escritório: abas no cabeçalho; indicadores por status; fichas em cartões; mapa FP-11 em tabela rolável; cadastros em colunas */
 html{padding-top:env(safe-area-inset-top,0px)}
 .wrap{max-width:1560px}
-.tabs{max-width:720px}
+.tabs{max-width:none}
 main{padding-block:18px 60px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis .k:first-child{grid-column:1/-1}}
@@ -193,6 +193,31 @@ td.ck input{width:18px;height:18px;min-height:0}
 .tbl-f{border-radius:14px;box-shadow:var(--shadow)}
 .tab-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:#c98500;color:#fff;font:700 .68rem var(--f-body);vertical-align:1px}
 table.ct tbody tr{cursor:default}
+.ctrsel{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--head-line);margin-right:10px}
+.ctrsel button{border:0;background:none;color:#c9d6e8;font:600 .78rem var(--f-body);padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.ctrsel button[aria-pressed="true"]{background:#fff;color:#0b2d5b}
+.ctrsel button small{font-weight:500;opacity:.75;margin-left:4px}
+@media (max-width:900px){.ctrsel button small{display:none}}
+.ro-note{margin:14px 0 12px;background:#eef3fa;border:1px solid #c9d8ee;color:#1c3b66;border-radius:10px;padding:10px 14px;font-size:.86rem}
+body.ro #btnSalvar,body.ro #btnExcluir,body.ro #btnAprovar,body.ro #btnDevolver,body.ro #cobBox,body.ro #btnAddIt,body.ro [data-anexar],body.ro [data-reg],body.ro [data-validar],body.ro #btnAutoFill,body.ro [data-conf-auto],body.ro [data-cancelar],body.ro #pendBulk{display:none!important}
+.mais{display:flex;justify-content:center;gap:10px;align-items:center;padding:12px 0;color:var(--muted);font-size:.82rem}
+.mais:empty{display:none}
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:4px 0 14px}
+.pcard{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;display:grid;gap:2px}
+.pcard b{font:700 1.5rem var(--f-display);color:var(--ink)}
+.pcard span{font-size:.8rem;color:var(--muted)}
+.pcard.w b{color:#c98500}.pcard.i b{color:#2a78d6}
+.bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-4px 0 10px;font-size:.84rem;color:var(--muted)}
+.tagauto{display:inline-block;font:600 .68rem var(--f-body);letter-spacing:.03em;padding:2px 7px;border-radius:999px;background:#e6f0fc;color:#1c5cab}
+.tagfalta{display:inline-block;font:600 .68rem var(--f-body);letter-spacing:.03em;padding:2px 7px;border-radius:999px;background:#fdf1dc;color:#8a5a00}
+.rels{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.rel{display:grid;gap:8px}
+.rel h4{margin:0}
+.rel .btn{justify-self:start}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.imp-res{display:grid;gap:8px;margin-top:6px}
+.imp-c{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:4px;font-size:.84rem}
+.imp-c b{font-size:.92rem}
 table.ct td.it{max-width:340px}
 table.ct .cn{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 table.ct .cn input{width:150px;padding:6px 8px;font-size:.82rem}
@@ -223,13 +248,16 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
   <div class="wrap">
     <div class="hbar">
       <div class="grow marca"><svg class="nx-mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80"><defs><linearGradient id="ofa" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6e6fa"/></linearGradient><linearGradient id="ofb" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2D8CFF"/><stop offset="1" stop-color="#8CC2FF"/></linearGradient></defs><path fill="url(#ofa)" d="M3 76 30 6h17L20 76z"/><path fill="url(#ofa)" opacity=".82" d="M30 6h17l19 49-9 21z"/><path fill="url(#ofb)" d="M42 54 57 76h7L99 3 88 7 61 63 52 47z"/></svg>
-<span style="width:1px;height:34px;background:var(--head-line)"></span><div><h1 class="wm">Nexum</h1><small>Recebimento <span class="wm-tag" style="font-weight:700">inteligente</span> · AMR · Flotação Recleaner · Escritório</small></div></div>
+<span style="width:1px;height:34px;background:var(--head-line)"></span><div><h1 class="wm">Nexum</h1><small>Recebimento <span class="wm-tag" style="font-weight:700">inteligente</span> · AMR · <span id="hdCtr">Flotação Recleaner</span> · Escritório</small></div></div>
+      <div class="ctrsel" id="ctrSel" role="group" aria-label="Contrato"></div>
       <span class="badge-demo" id="badgeDemo">Modo exemplo</span>
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-v="painel" aria-selected="true">Painel</button>
       <button class="tab" role="tab" data-v="fichas" aria-selected="false">Fichas</button>
       <button class="tab" role="tab" data-v="certs" aria-selected="false">Certificados <span class="tab-n" id="tabCertN" hidden></span></button>
+      <button class="tab" role="tab" data-v="pend" aria-selected="false">Pendências <span class="tab-n" id="tabPendN" hidden></span></button>
+      <button class="tab" role="tab" data-v="rel" aria-selected="false">Relatórios</button>
       <button class="tab" role="tab" data-v="mapa" aria-selected="false">Mapa FP-11</button>
       <button class="tab" role="tab" data-v="cadastros" aria-selected="false">Cadastros</button>
     </nav>
@@ -237,6 +265,7 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
 </header>
 
 <main class="wrap">
+  <div class="notice ro-note" id="roNote" hidden></div>
   <section id="v-painel">
     <div class="dash-top">
       <div><h2 class="dash-t">Visão geral</h2><span class="dash-sub" id="dashSub"></span></div>
@@ -262,30 +291,66 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
     </div>
     <div class="chips" id="chips"></div>
     <div class="tbl-wrap tbl-f"><table class="ft" id="lista"></table></div>
+    <div class="mais" id="listaMais"></div>
   </section>
 
   <section id="v-certs" hidden>
-    <div class="sec-h" style="margin-bottom:10px"><div><h2 style="margin:0;font:700 1.15rem var(--f-head)">Certificados</h2><p class="hint" style="margin:2px 0 0">Itens que exigem certificado (CMC). Ao anexar, a pendência sai sozinha e a ficha e o relatório se atualizam.</p></div></div>
+    <div class="sec-h" style="margin-bottom:10px"><div><h2 style="margin:0;font:700 1.15rem var(--f-display)">Certificados</h2><p class="hint" style="margin:2px 0 0">Itens que exigem certificado (CMC). Ao anexar, a pendência sai sozinha e a ficha e o relatório se atualizam.</p></div></div>
     <div class="filters">
       <input id="qCert" type="search" placeholder="Buscar ficha, NF, fornecedor, item, TAG, nº do certificado…" aria-label="Buscar certificados">
     </div>
     <div class="chips" id="chipsCert"></div>
     <div class="tbl-wrap tbl-f"><table class="ft ct" id="tCert"></table></div>
+    <div class="mais" id="certMais"></div>
     <input type="file" id="certFile" accept="image/*,application/pdf" multiple hidden>
+  </section>
+
+  <section id="v-pend" hidden>
+    <div class="sec-h" style="margin-bottom:10px"><div><h2 class="dash-t">Pendências de dados</h2><p class="hint" style="margin:2px 0 0">O Nexum procura informações faltantes e preenche sozinho o que dá para deduzir dos outros registros. Cada preenchimento fica marcado para revisão.</p></div>
+      <button class="btn" type="button" id="btnAutoFill">Preencher automaticamente agora</button></div>
+    <div class="pcards" id="pendCards"></div>
+    <div class="filters"><input id="qPend" type="search" placeholder="Buscar ficha, campo, regra…" aria-label="Buscar pendências"></div>
+    <div class="chips" id="chipsPend"></div>
+    <div class="bulk" id="pendBulk" hidden></div>
+    <div class="tbl-wrap tbl-f"><table class="ft ct" id="tPend"></table></div>
+    <div class="mais" id="pendMais"></div>
+  </section>
+
+  <section id="v-rel" hidden>
+    <div class="sec-h" style="margin-bottom:12px"><div><h2 class="dash-t">Relatórios</h2><p class="hint" style="margin:2px 0 0">Gerados na hora, direto dos registros do contrato <b id="relCtr"></b>. Nada é montado à mão.</p></div></div>
+    <div class="rels">
+      <div class="box rel"><h4>Mapa de recebimento (FP-11)</h4><p class="hint">Uma linha por item, no layout do 447.QUA.FP-11. Arquivo Excel (.xlsx).</p>
+        <label class="hint" for="relMapaPer">Período</label><select id="relMapaPer"></select>
+        <button class="btn primary" type="button" id="relMapa">Baixar mapa (.xlsx)</button></div>
+      <div class="box rel"><h4>Fichas FP-01 em lote (PDF)</h4><p class="hint">Todas as fichas do intervalo num único PDF, no modelo 447.OPE.FP-01. Até 150 fichas por vez.</p>
+        <div class="row2"><div><label class="hint" for="relDe">Da ficha</label><input id="relDe" type="number" min="1" inputmode="numeric"></div><div><label class="hint" for="relAte">Até a ficha</label><input id="relAte" type="number" min="1" inputmode="numeric"></div></div>
+        <button class="btn primary" type="button" id="relFichas">Gerar PDF das fichas</button><span class="hint" id="relFichasInfo"></span></div>
+      <div class="box rel"><h4>Pendências (.xlsx)</h4><p class="hint">Certificados pendentes, informações faltantes, preenchimentos automáticos a revisar e números sem ficha, em abas separadas.</p>
+        <button class="btn primary" type="button" id="relPend">Baixar pendências (.xlsx)</button></div>
+      <div class="box rel"><h4>Resumo das fichas (.xlsx)</h4><p class="hint">Uma linha por ficha: documento, fornecedor, data, itens, status, conferência e pendências.</p>
+        <button class="btn primary" type="button" id="relResumo">Baixar resumo (.xlsx)</button></div>
+    </div>
   </section>
 
   <section id="v-mapa" hidden>
     <div class="mapa-head">
       <div class="grow" id="mapaInfo"></div>
       <input id="qMapa" type="search" placeholder="Filtrar o mapa…" style="width:auto;flex:1 1 200px" aria-label="Filtrar o mapa">
-      <button class="btn primary" type="button" id="btnExport">Exportar mapa (Excel)</button>
+      <button class="btn primary" type="button" id="btnExport">Exportar mapa (.xlsx)</button>
     </div>
     <div class="tbl-wrap"><table class="mapa" id="tMapa"></table></div>
+    <div class="mais" id="mapaMais"></div>
   </section>
 
   <section id="v-cadastros" hidden>
     <div class="cad">
       <div class="grp">
+        <div class="box" id="impBox">
+          <h4>Importar histórico (Mapa FP-11)</h4>
+          <p class="hint">Escolha a planilha 447.QUA.FP-11 do computador. O Nexum separa as abas por contrato (Flotação Recleaner e Upgrade do Espessador), monta as fichas, padroniza os dados e preenche o que faltar. A planilha é lida aqui no computador e não é publicada.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" id="btnImpEscolher">Escolher planilha FP-11</button><input type="file" id="impFile" accept=".xlsx,.xlsm,.xls" hidden></div>
+          <div class="imp-res" id="impRes"></div>
+        </div>
         <div class="box">
           <h4>Numeração das fichas</h4>
           <p class="hint">Sequência única para NF e romaneio Anglo. O app usa o maior entre este número e a última ficha lançada + 1.</p>
@@ -445,15 +510,29 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
 <script src="assets/dashboard.js"></script>
 <script src="assets/atualizacao.js"></script>
 <script src="assets/diligenciamento.js"></script>
+<script src="assets/importar.js"></script>
 <script>
 (function(){
 const A=window.AMR,$=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let fichas=[],cad=null,fStatus="todas",ed=null,edItens=[];
+let fichas=[],todas=[],lacs=[],cad=null,fStatus="todas",ed=null,edItens=[];
+let ctr="recleaner";try{ctr=localStorage.getItem("nx_ctr")||"recleaner"}catch(e){}if(!A.CONTRATOS[ctr])ctr="recleaner";
+const lim={lista:300,mapa:300,cert:300,pend:300};
+const CT=()=>A.CONTRATOS[ctr];
+function filtrar(){const d=todas.filter(f=>A.ctrDe(f)===ctr);fichas=d.filter(f=>!f.lacuna);lacs=d.filter(f=>f.lacuna&&!f.cancelada)}
+function maisBtn(el,total,k,fn){$(el).innerHTML=total>lim[k]?`Mostrando ${lim[k].toLocaleString("pt-BR")} de ${total.toLocaleString("pt-BR")} · <button class="btn small" type="button">Mostrar mais</button>`:"";const b=$(el).querySelector("button");if(b)b.onclick=()=>{lim[k]+=600;fn()}}
+function renderCtr(){
+  $("ctrSel").innerHTML=Object.values(A.CONTRATOS).map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===ctr}">${c.nome}${c.ativo?"":"<small>· encerrado</small>"}</button>`).join("");
+  $("ctrSel").querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{if(b.dataset.c===ctr)return;ctr=b.dataset.c;try{localStorage.setItem("nx_ctr",ctr)}catch(e){}Object.keys(lim).forEach(k=>lim[k]=300);fStatus="todas";filtrar();renderCtr();renderTudo()});
+  $("hdCtr").textContent=CT().nome;document.body.classList.toggle("ro",!CT().ativo);
+  $("roNote").hidden=CT().ativo;
+  if(!CT().ativo)$("roNote").innerHTML=`<b>${esc(CT().nome)} · contrato encerrado.</b> Os registros ficam guardados só para consulta: dá para ver, filtrar, exportar e gerar os relatórios, mas não para lançar ou alterar.`;
+  document.title="Nexum · Escritório · "+CT().nome;
+}
 function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(bad?" bad":"");e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 
 /* abas */
-function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));["painel","fichas","certs","mapa","cadastros"].forEach(x=>$("v-"+x).hidden=x!==v);if(v==="certs")renderCerts()}
+function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));["painel","fichas","certs","pend","rel","mapa","cadastros"].forEach(x=>$("v-"+x).hidden=x!==v);if(v==="certs")renderCerts();if(v==="pend")renderPend();if(v==="rel")renderRel();if(v==="mapa")renderMapa();if(v==="painel")renderPainel()}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.v));
 
 function docTxt(f){return f.tipo==="ROM"?"Romaneio "+(f.romaneio||"—"):"NF "+(f.nf||"—")+" · "+(f.fornecedor||"—")}
@@ -466,7 +545,8 @@ NXDASH.tooltip($("v-painel"));
 let rszT;window.addEventListener("resize",()=>{clearTimeout(rszT);rszT=setTimeout(()=>{if(!$("v-painel").hidden)renderPainel()},200)});
 function renderPainel(){
   $("per").innerHTML=Object.entries(NXDASH.PER).map(([k,l])=>`<button type="button" data-p="${k}" aria-pressed="${k===periodo}">${l}</button>`).join("");
-  $("per").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{periodo=b.dataset.p;try{localStorage.setItem("nx_periodo",periodo)}catch(e){}renderPainel()});
+  $("per").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{periodo=b.dataset.p;renderPainel.manual=true;try{localStorage.setItem("nx_periodo",periodo)}catch(e){}renderPainel()});
+  if(!CT().ativo&&periodo!=="tudo"&&!renderPainel.manual)periodo="tudo";
   const reais=fichas.filter(f=>!f.exemplo);
   const usarDemo=A.store.modo==="exemplo"&&reais.length<5;
   const base=(usarDemo?NXDASH.demo(A):fichas).filter(f=>NXDASH.noPeriodo(f,periodo));
@@ -509,6 +589,7 @@ function renderLista(){
   const q=A.norm($("q").value),t=$("fTipo").value;
   const l=fichas.filter(f=>(fStatus==="todas"||f.status===fStatus)&&(!t||f.tipo===t)&&(!q||A.norm([f.numero,f.nf,f.romaneio,f.fornecedor,...(f.itens||[]).flatMap(i=>[i.tag,i.descricao,i.certificado])].join(" ")).includes(q)))
     .sort((a,b)=>b.numero-a.numero);
+  const total=l.length;l.splice(lim.lista);
   const I=NXUI.icon;
   $("lista").innerHTML=`<thead><tr><th>Ficha</th><th>Tipo</th><th>Documento</th><th>Fornecedor</th><th>Recebimento</th><th>Itens</th><th>Pendências</th><th>Status</th></tr></thead><tbody>${l.length?l.map(f=>{
     const p=A.pendencias(f),c=A.conf(f),al=[];
@@ -518,25 +599,54 @@ function renderLista(){
     if(p.includes("validar certificado"))al.push(`<span style="color:var(--wait)">${I("check")}Validar cert.</span>`);
     if(p.includes("não conformidade"))al.push(`<span style="color:var(--bad)">${I("alert")}NC</span>`);
     return `<tr data-id="${f.id}"><td class="n">${f.numero}${f.exemplo?' <span class="ex">exemplo</span>':""}</td><td><span class="pill ${f.tipo}">${f.tipo==="ROM"?"ROMANEIO":"NF"}</span></td><td>${esc(f.tipo==="ROM"?f.romaneio:f.nf)}</td><td>${esc(f.tipo==="ROM"?"Anglo American":f.fornecedor)}</td><td class="s">${A.fmtData(f.dataRecebimento)}</td><td>${A.itensValidos(f).length}</td><td><div class="al">${al.join("")||'<span class="s">—</span>'}</div></td><td><span class="pill ${f.status}">${A.STATUS[f.status].rotulo}</span></td></tr>`}).join(""):`<tr><td colspan="8" style="padding:28px;text-align:center;color:var(--muted)">Nenhuma ficha encontrada. Ajuste a busca ou os filtros.</td></tr>`}</tbody>`;
-  bind($("lista"));
+  bind($("lista"));maisBtn("listaMais",total,"lista",renderLista);
 }
 $("q").oninput=renderLista;$("fTipo").onchange=renderLista;
 
 /* mapa */
 function renderMapa(){
+  if($("v-mapa").hidden)return;
   const q=A.norm($("qMapa").value);
-  const linhas=A.linhasMapa(fichas).filter(r=>!q||A.norm(r.join(" ")).includes(q));
-  $("mapaInfo").textContent=`${linhas.length} linhas · ${A.DOC_MAPA} · uma linha por item, gerada das fichas`;
+  const todasL=A.linhasMapa(fichas).filter(r=>!q||A.norm(r.join(" ")).includes(q)),linhas=todasL.slice(0,lim.mapa);
+  $("mapaInfo").textContent=`${todasL.length.toLocaleString("pt-BR")} linhas · ${A.DOC_MAPA} · ${CT().nome} · uma linha por item, gerada das fichas`;
   $("tMapa").innerHTML=`<thead><tr>${A.COLS_MAPA.map(c=>`<th>${c}</th>`).join("")}</tr></thead><tbody>${linhas.map(r=>`<tr>${r.map((v,i)=>`<td${i===3?' class="d"':""}>${esc(v)}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="15" style="padding:20px;color:var(--muted)">Nenhuma linha.</td></tr>`}</tbody>`;
+  maisBtn("mapaMais",todasL.length,"mapa",renderMapa);
 }
-$("qMapa").oninput=renderMapa;
-$("btnExport").onclick=async()=>{
-  const nome=`${A.DOC_MAPA} - Mapa Recebimento de Materiais ${A.hoje()}.csv`,dados=A.csvMapa(fichas);
-  const dl=window.claude&&window.claude.use?await window.claude.use("downloads").catch(()=>null):null;
-  if(dl){try{await dl.save({filename:nome,data:dados});toast("Mapa exportado")}catch(e){if(e&&e.code!=="declined")toast("Não foi possível exportar.",true)}return}
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([dados],{type:"text/csv;charset=utf-8"}));
-  a.download=nome;document.body.appendChild(a);a.click();
-  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast("Mapa exportado");
+$("qMapa").oninput=()=>{lim.mapa=300;renderMapa()};
+
+/* ---------- Excel (.xlsx) ---------- */
+function dataXL(iso){if(!iso)return "";const [y,m,d]=String(iso).slice(0,10).split("-").map(Number);return y?new Date(y,m-1,d):""}
+const semAcentoArq=n=>String(n).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\\/:*?"<>|]+/g,"-");
+function baixarXlsx(wb,nome){
+  nome=semAcentoArq(nome);
+  try{const buf=window.XLSX.write(wb,{bookType:"xlsx",type:"array",compression:true,cellDates:true});
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+    a.download=nome;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Arquivo gerado: "+nome)}
+  catch(e){console.error(e);toast("Não consegui gerar o Excel: "+(e.message||e),true)}
+}
+function abaMapa(lista,ctrObj){
+  const X=window.XLSX,linhas=[];
+  A.linhasMapa(lista).forEach(r=>{const o=r.slice();const q=Number(String(o[9]).replace(/\./g,"").replace(",","."));if(o[9]!==""&&isFinite(q))o[9]=q;const n=Number(o[1]);if(isFinite(n))o[1]=n;if(o[2]!==""&&isFinite(Number(o[2])))o[2]=Number(o[2]);linhas.push(o)});
+  const datas=new Map();lista.forEach(f=>datas.set(String(f.numero),f.dataRecebimento));
+  linhas.forEach(o=>{o[10]=dataXL(datas.get(String(o[1])))||""});
+  const topo=[[`MAPA - RECEBIMENTO DE MATERIAIS · ${A.DOC_MAPA} · ${ctrObj.projeto}`],[`Data de atualização: ${A.fmtData(A.hoje())}`,"","","",`Gerado pelo Nexum`],[]];
+  const ws=X.utils.aoa_to_sheet([...topo,A.COLS_MAPA,...linhas],{cellDates:true,dateNF:"dd/mm/yyyy"});
+  ws["!merges"]=[{s:{r:0,c:0},e:{r:0,c:14}}];
+  ws["!cols"]=[14,9,6,60,18,14,18,22,7,10,13,20,34,22,8].map(w=>({wch:w}));
+  ws["!autofilter"]={ref:X.utils.encode_range({s:{r:3,c:0},e:{r:3+linhas.length,c:14}})};
+  for(let r=4;r<4+linhas.length;r++){const c=ws[X.utils.encode_cell({r,c:10})];if(c&&c.t==="d")c.z="dd/mm/yyyy"}
+  return ws;
+}
+function exportarMapa(lista,sufixo){
+  const X=window.XLSX;if(!X){toast("O gerador de Excel não carregou. Recarregue a página.",true);return}
+  if(!lista.length){toast("Não há fichas para exportar nesse período.",true);return}
+  const wb=X.utils.book_new();X.utils.book_append_sheet(wb,abaMapa(lista,CT()),"Mapa FP-11");
+  baixarXlsx(wb,`${A.DOC_MAPA} - Mapa Recebimento - ${CT().nome}${sufixo?" - "+sufixo:""} - ${A.hoje()}.xlsx`);
+}
+$("btnExport").onclick=()=>{
+  const q=A.norm($("qMapa").value);
+  const l=q?fichas.filter(f=>A.linhasMapa([f]).some(r=>A.norm(r.join(" ")).includes(q))):fichas;
+  exportarMapa(l,q?"filtrado":"");
 };
 
 /* detalhe / edição */
@@ -544,7 +654,7 @@ function abrir(f){
   ed=JSON.parse(JSON.stringify(f)); edItens=ed.itens||[];
   $("shTitle").textContent="Ficha Nº "+ed.numero;
   $("dTipo").className="pill "+ed.tipo; $("dTipo").textContent=A.TIPOS[ed.tipo].rotulo;
-  $("dOrigem").textContent=(ed.exemplo?"Exemplo · ":"")+"lançado pelo "+(ed.origem==="campo"?"campo":"escritório")+(ed.criadoEm?" em "+A.fmtData(ed.criadoEm):"");
+  $("dOrigem").textContent=(ed.exemplo?"Exemplo · ":"")+(ed.lacuna?"número sem ficha no mapa · preencha e salve para criar a ficha":ed.origem==="importacao"?"importada do mapa FP-11"+((ed.auto||[]).length?` · ${ed.auto.length} informação(ões) preenchida(s) automaticamente (veja Pendências)`:""):"lançado pelo "+(ed.origem==="campo"?"campo":"escritório")+(ed.criadoEm?" em "+A.fmtData(ed.criadoEm):""));
   $("dChave").hidden=!ed.chaveNFe;if(ed.chaveNFe)$("dChave").innerHTML=`<span class="lbl">Chave de acesso (lida do código de barras)</span><span class="code">${ed.chaveNFe.replace(/(\d{4})/g,"$1 ").trim()}</span>${ed.cnpjFornecedor?`<span class="code">CNPJ ${esc(ed.cnpjFornecedor)}${ed.serie?" · série "+esc(ed.serie):""}</span>`:""}`;
   document.querySelectorAll("[data-t]").forEach(e=>e.hidden=e.dataset.t!==ed.tipo);
   $("lRom").textContent=ed.tipo==="ROM"?"Romaneio Anglo":"Romaneio (PC-REV)";
@@ -601,6 +711,7 @@ $("btnAddIt").onclick=()=>{edItens.push({descricao:"",tag:"",und:ed.tipo==="ROM"
 function coletar(){
   const f={...ed,itens:edItens,observacao:$("dObs").value.trim(),dataRecebimento:$("dData").value,romaneio:A.norm($("dRom").value)};
   if(f.tipo==="NF"){f.nf=$("dNf").value.trim();f.fornecedor=A.norm($("dForn").value)}
+  if(f.lacuna&&(f.nf||f.romaneio||A.itensValidos(f).length))f.lacuna=false;
   f.assinaturas={};$("dSign").querySelectorAll("[data-sg]").forEach(cb=>{if(cb.checked)f.assinaturas[cb.dataset.sg]={em:$("dSign").querySelector(`[data-sgd="${cb.dataset.sg}"]`).value}});
   return f;
 }
@@ -716,7 +827,7 @@ $("devOk").onclick=async()=>{
 function gerarPdf(){
   const f=coletar();
   if(!A.itensValidos(f).length){toast("A ficha não tem itens para imprimir.",true);return null}
-  try{return {doc:window.FICHA_PDF.gerar(A,f,A.cadastros.documento()),nome:window.FICHA_PDF.nomeArquivo(A,f)}}
+  try{return {doc:window.FICHA_PDF.gerar(A,f,{...A.cadastros.documento(),ctr:CT()}),nome:window.FICHA_PDF.nomeArquivo(A,f)}}
   catch(e){toast(e.message||"Não foi possível gerar o PDF.",true);return null}
 }
 $("btnPdfVer").onclick=()=>{const g=gerarPdf();if(!g)return;const url=g.doc.output("bloburl");const w=window.open(url,"_blank");if(!w){g.doc.save(g.nome);toast("O navegador bloqueou a nova aba; o PDF foi baixado.")}};
@@ -731,7 +842,7 @@ function renderCad(){
   if(document.activeElement!==$("cfgProj"))$("cfgProj").value=cad.projetoCliente||"";
   $("cmcLista").innerHTML=A.CMC.map(g=>`<div style="display:grid;gap:2px;border-top:1px solid var(--line);padding-top:8px"><strong style="font-size:.9rem">${esc(g.rotulo)} <span class="code">${esc(g.doc)}</span></strong><span class="hint">${esc(g.tipo)} · Setor ${esc(g.setor)} · CQ ${esc(g.cq)} · Cliente ${esc(g.cliente)}</span>${g.evidencia?`<span class="hint">Evidência: ${esc(g.evidencia)}</span>`:""}</div>`).join("")+'<p class="hint" style="margin-top:6px">C inspeção de produto · R verificação da documentação · V exame visual · M amostragem · W testemunho opcional</p>';
   $("fichaIni").value=cad.fichaInicial;
-  $("proxFicha").textContent="Próxima ficha: Nº "+A.proximoNumero(fichas,cad.fichaInicial);
+  $("proxFicha").textContent="Próxima ficha: Nº "+A.proximoNumero(todas,cad.fichaInicial,"recleaner")+" (Flotação Recleaner)";
   $("grupos").innerHTML=Object.entries(A.GRUPOS).map(([k,l])=>`<div class="f"><label for="g_${k}">${l} <span class="code">(${cad.grupos[k].length})</span></label><textarea id="g_${k}" rows="2" placeholder="nome@milplan.com.br">${esc(cad.grupos[k].join("\n"))}</textarea></div>`).join("")+`<div><button class="btn small" type="button" id="btnGrupos">Salvar grupos</button></div>`;
   $("btnGrupos").onclick=async()=>{const v=Object.fromEntries(Object.keys(A.GRUPOS).map(k=>[k,$("g_"+k).value.split(/[\n,;]+/)]));try{for(const k of Object.keys(v)){const bad=v[k].map(x=>x.trim()).filter(Boolean).find(x=>!A.emailOk(x));if(bad)throw new Error("E-mail inválido em "+A.GRUPOS[k]+": "+bad)}for(const k of Object.keys(v))await A.cadastros.salvarGrupo(k,v[k]);toast("Grupos salvos")}catch(e){toast(e.message,true)}};
   const q=A.norm($("qForn").value);
@@ -794,6 +905,7 @@ function renderCerts(){
   $("chipsCert").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{fCert=c.dataset.k;renderCerts()});
   const q=A.norm($("qCert").value||"");
   const ls=todas.filter(x=>(fCert==="todos"||x.sit===fCert)&&(!q||A.norm([x.f.numero,x.f.nf,x.f.fornecedor,x.it.descricao,x.it.tag,x.it.codigo,x.it.certificado].join(" ")).includes(q)));
+  const totalC=ls.length;ls.splice(lim.cert);setTimeout(()=>maisBtn("certMais",totalC,"cert",renderCerts));
   const vazio={pendente:"Nenhum certificado pendente. Tudo em dia.",recebido:"Nenhum certificado aguardando validação.",validado:"Nenhum certificado validado ainda.",todos:"Nenhum item que exija certificado."}[fCert];
   $("tCert").innerHTML=`<thead><tr><th>Ficha</th><th>NF · Fornecedor</th><th>Item</th><th>Certificado</th><th>Situação</th><th style="text-align:right">Ações</th></tr></thead><tbody>${ls.length?ls.map(x=>{
     const anx=(x.f.anexos?.cert||[]).map((a,k)=>({a,k})).filter(y=>y.a.item===x.idx);
@@ -830,10 +942,156 @@ $("certFile").onchange=async e=>{const files=e.target.files;if(!certAlvo||!files
   const f=fichas.find(z=>z.id===alvo.id);if(f)await salvarCert(f,alvo.idx,{numero:alvo.numero,anexos})};
 $("qCert").addEventListener("input",renderCerts);
 
-function renderTudo(){renderPainel();renderLista();renderCerts();renderMapa();renderCad();if(ed)avisos()}
+/* ---------- Pendências de dados ---------- */
+let fPend="todas";
+function itensPend(){
+  const out=[];
+  fichas.forEach(f=>NXIMP.faltantes(f).forEach((p,k)=>out.push({f,p,k})));
+  lacs.forEach(f=>out.push({f,p:{campo:"lacuna",tipo:"falta"},k:0}));
+  return out;
+}
+function grupoPend(x){return x.p.tipo==="auto"?"auto:"+x.p.campo:"falta:"+x.p.campo}
+function renderPend(){
+  const all=itensPend();
+  const nFalta=all.filter(x=>x.p.tipo==="falta"&&x.p.campo!=="lacuna").length,nAuto=all.filter(x=>x.p.tipo==="auto").length,nLac=lacs.length;
+  const nCert=fichas.reduce((s,f)=>s+A.itensValidos(f).filter(i=>A.certSituacao(f,i)==="pendente").length,0);
+  $("tabPendN").hidden=!(nFalta+nLac);$("tabPendN").textContent=nFalta+nLac;
+  if($("v-pend").hidden)return;
+  $("pendCards").innerHTML=[["w",nFalta,"informações faltando","falta"],["i",nAuto,"preenchidas automaticamente · a revisar","auto"],["",nLac,"números sem ficha no mapa","falta:lacuna"],["w",nCert,"certificados pendentes (aba Certificados)",""]].map(([c,n,t,k])=>`<button class="pcard ${c}" type="button" ${k?`data-g="${k}"`:'data-cert="1"'} style="text-align:left;cursor:pointer"><b>${n.toLocaleString("pt-BR")}</b><span>${t}</span></button>`).join("");
+  $("pendCards").querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{fPend=b.dataset.g;lim.pend=300;renderPend()});
+  $("pendCards").querySelector("[data-cert]").onclick=()=>show("certs");
+  const grupos={};all.forEach(x=>{const g=grupoPend(x);grupos[g]=(grupos[g]||0)+1});
+  const nomeG=g=>{const [t,c]=g.split(":");return (t==="auto"?"Automático · ":"Falta · ")+(NXIMP.ROT[c]||c)};
+  const chips=[["todas","Todas · "+all.length],["falta","Faltando · "+(nFalta+nLac)],["auto","Automáticas · "+nAuto],...Object.entries(grupos).sort((a,b)=>b[1]-a[1]).map(([g,n])=>[g,nomeG(g)+" · "+n.toLocaleString("pt-BR")])];
+  $("chipsPend").innerHTML=chips.map(([k,l])=>`<button class="chip" type="button" data-k="${k}" aria-pressed="${k===fPend}">${l}</button>`).join("");
+  $("chipsPend").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{fPend=c.dataset.k;lim.pend=300;renderPend()});
+  const q=A.norm($("qPend").value||"");
+  const ls=all.filter(x=>(fPend==="todas"||x.p.tipo===fPend||grupoPend(x)===fPend)&&(!q||A.norm([x.f.numero,NXIMP.ROT[x.p.campo],x.p.regra,x.p.valor,x.f.nf,x.f.romaneio,x.f.fornecedor].join(" ")).includes(q)))
+    .sort((a,b)=>(a.p.tipo==="falta"?0:1)-(b.p.tipo==="falta"?0:1)||b.f.numero-a.f.numero);
+  const autos=ls.filter(x=>x.p.tipo==="auto");
+  $("pendBulk").hidden=!autos.length;
+  $("pendBulk").innerHTML=autos.length?`<span>${autos.length.toLocaleString("pt-BR")} preenchimento(s) automático(s) nesta lista.</span><button class="btn small" type="button" id="btnConfTodos">Confirmar todos</button>`:"";
+  if(autos.length)$("btnConfTodos").onclick=()=>confirmarAutos(autos);
+  const total=ls.length;ls.splice(lim.pend);
+  $("tPend").innerHTML=`<thead><tr><th>Ficha</th><th>Documento</th><th>Informação</th><th>Situação</th><th>Valor / regra</th><th style="text-align:right">Ações</th></tr></thead><tbody>${ls.length?ls.map((x,j)=>{
+    const f=x.f,p=x.p,it=p.item!==undefined?f.itens[p.item]:null;
+    const doc=f.lacuna?"—":f.tipo==="ROM"?"Romaneio "+esc(f.romaneio||"—"):"NF "+esc(f.nf||"—")+" · "+esc(f.fornecedor||"—");
+    const inf=(NXIMP.ROT[p.campo]||p.campo)+(it?`<div class="s">Item ${p.item+1} · ${esc((it.descricao||it.tag||"").slice(0,70))}</div>`:"");
+    const sit=p.tipo==="auto"?'<span class="tagauto">Preenchido automaticamente</span>':'<span class="tagfalta">Faltando</span>';
+    const val=p.campo==="lacuna"?"Número pulado na sequência do mapa. Abra para lançar a ficha ou marque como cancelado.":p.tipo==="auto"?`<b>${esc(p.campo==="dataRecebimento"?A.fmtData(p.valor):p.campo==="status"?(A.STATUS[p.valor]?.rotulo||p.valor):p.valor)}</b><div class="s">${esc(p.regra)}</div>`:'<span class="s">Não dá para deduzir dos outros registros. Complete na ficha.</span>';
+    return `<tr data-j="${j}"><td><span class="n">${f.numero}</span></td><td>${doc}</td><td>${inf}</td><td>${sit}</td><td>${val}</td><td><div class="acts">${p.tipo==="auto"?'<button class="btn small" type="button" data-conf-auto>Confirmar</button>':""}${p.campo==="lacuna"?'<button class="btn small" type="button" data-cancelar>Cancelado</button>':""}<button class="btn small ghost" type="button" data-ficha>${p.campo==="lacuna"?"Lançar":"Ficha"}</button></div></td></tr>`}).join(""):'<tr><td colspan="6" class="hint" style="padding:22px 12px">Nenhuma pendência de dados aqui.</td></tr>'}</tbody>`;
+  $("tPend").querySelectorAll("tr[data-j]").forEach(tr=>{const x=ls[+tr.dataset.j];
+    tr.querySelector("[data-ficha]").onclick=()=>abrir(x.f);
+    const c=tr.querySelector("[data-conf-auto]");if(c)c.onclick=()=>confirmarAutos([x]);
+    const k=tr.querySelector("[data-cancelar]");if(k)k.onclick=async()=>{await A.store.salvarVarias([{...x.f,cancelada:true}]);toast(`Número ${x.f.numero} marcado como cancelado`)};
+  });
+  maisBtn("pendMais",total,"pend",renderPend);
+}
+async function confirmarAutos(lista){
+  const por=new Map();lista.forEach(x=>{if(!por.has(x.f.id))por.set(x.f.id,{f:x.f,rem:new Set()});por.get(x.f.id).rem.add(JSON.stringify(x.p.item===undefined?[x.p.campo]:[x.p.campo,x.p.item]))});
+  const muda=[...por.values()].map(({f,rem})=>({...f,auto:(f.auto||[]).filter(a=>!rem.has(JSON.stringify(a.item===undefined?[a.campo]:[a.campo,a.item]))),autoConfirmado:[...(f.autoConfirmado||[]),...(f.auto||[]).filter(a=>rem.has(JSON.stringify(a.item===undefined?[a.campo]:[a.campo,a.item]))).map(a=>({...a,em:A.hoje()}))]}));
+  await A.store.salvarVarias(muda);toast(`${lista.length.toLocaleString("pt-BR")} preenchimento(s) confirmado(s)`);
+}
+$("qPend").addEventListener("input",()=>{lim.pend=300;renderPend()});
+let autoRodando=false;
+async function autoPreencher(manual){
+  if(autoRodando||!CT().ativo)return 0;autoRodando=true;
+  try{const base=todas.filter(f=>A.ctrDe(f)===ctr&&!f.lacuna&&!f.exemplo);const m=NXIMP.completarExistentes(base);
+    if(m.length){await A.store.salvarVarias(m);const n=m.reduce((s,g)=>s+(g.auto||[]).length-((base.find(f=>f.id===g.id)||{}).auto||[]).length,0);toast(`${n.toLocaleString("pt-BR")} informação(ões) preenchida(s) automaticamente em ${m.length} ficha(s)`)}
+    else if(manual)toast("Nada novo para preencher: o que falta não dá para deduzir dos outros registros.");
+    return m.length}finally{autoRodando=false}
+}
+$("btnAutoFill").onclick=()=>autoPreencher(true);
+
+/* ---------- Relatórios ---------- */
+function renderRel(){
+  $("relCtr").textContent=CT().nome;
+  const anos=[...new Set(fichas.map(f=>(f.dataRecebimento||"").slice(0,4)).filter(Boolean))].sort().reverse();
+  const meses=[...new Set(fichas.map(f=>(f.dataRecebimento||"").slice(0,7)).filter(Boolean))].sort().reverse().slice(0,12);
+  const cur=$("relMapaPer").value;
+  $("relMapaPer").innerHTML=`<option value="">Todo o período</option>${anos.map(a=>`<option value="${a}">Ano ${a}</option>`).join("")}${meses.map(m=>`<option value="${m}">${["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][+m.slice(5)-1]}/${m.slice(0,4)}</option>`).join("")}`;
+  if(cur)$("relMapaPer").value=cur;
+  const nums=fichas.filter(f=>A.itensValidos(f).length).map(f=>+f.numero).sort((a,b)=>a-b);
+  if(nums.length&&(renderRel.k!==ctr+nums.length||!loteSel().length)){renderRel.k=ctr+nums.length;$("relAte").value=nums.at(-1);$("relDe").value=nums[Math.max(0,nums.length-20)]}
+  infoLote();
+}
+function loteSel(){const de=+$("relDe").value||0,ate=+$("relAte").value||0;return fichas.filter(f=>+f.numero>=Math.min(de,ate)&&+f.numero<=Math.max(de,ate)&&A.itensValidos(f).length).sort((a,b)=>a.numero-b.numero)}
+function infoLote(){const n=loteSel().length;$("relFichasInfo").textContent=n?`${n} ficha(s) com itens no intervalo${n>150?" · reduza para até 150":""}`:"Nenhuma ficha com itens nesse intervalo."}
+$("relDe").oninput=$("relAte").oninput=infoLote;
+$("relMapa").onclick=()=>{const p=$("relMapaPer").value;exportarMapa(p?fichas.filter(f=>(f.dataRecebimento||"").startsWith(p)):fichas,p)};
+$("relFichas").onclick=async()=>{
+  const l=loteSel();if(!l.length){toast("Nenhuma ficha com itens nesse intervalo.",true);return}
+  if(l.length>150){toast("São "+l.length+" fichas. Gere em lotes de até 150.",true);return}
+  const b=$("relFichas");b.disabled=true;
+  try{let doc=null;const cfg={...A.cadastros.documento(),ctr:CT()};
+    for(let k=0;k<l.length;k++){b.textContent=`Gerando ${k+1} de ${l.length}…`;doc=window.FICHA_PDF.gerar(A,l[k],cfg,doc);if(k%10===9)await new Promise(r=>setTimeout(r))}
+    doc.setProperties({title:`Fichas FP-01 ${l[0].numero} a ${l.at(-1).numero} - ${CT().nome}`,creator:"Nexum"});
+    let nome=`447.OPE.FP-01 - Fichas ${l[0].numero} a ${l.at(-1).numero} - ${CT().nome}.pdf`;nome=semAcentoArq(nome);doc.save(nome);toast("PDF gerado: "+nome)}
+  catch(e){toast(e.message||"Não foi possível gerar o PDF.",true)}finally{b.disabled=false;b.textContent="Gerar PDF das fichas"}
+};
+$("relPend").onclick=()=>{
+  const X=window.XLSX,wb=X.utils.book_new();
+  const cert=fichas.flatMap(f=>A.itensValidos(f).map((i,n)=>({f,i,n:f.itens.indexOf(i)})).filter(x=>A.certSituacao(x.f,x.i)==="pendente")).map(x=>[x.f.numero,x.f.nf,x.f.fornecedor,dataXL(x.f.dataRecebimento),x.n+1,x.i.descricao,x.i.tag,x.i.und,x.i.qtd,(A.materialCritico(x.i.descricao,x.i.tag)||{}).rotulo||"",(x.f.cobrancas||[]).length?"Sim":"Não"]);
+  const all=itensPend(),lin=p=>p.item!==undefined?p.item+1:"";
+  const falta=all.filter(x=>x.p.tipo==="falta"&&x.p.campo!=="lacuna").map(x=>[x.f.numero,x.f.tipo==="ROM"?"Romaneio "+(x.f.romaneio||""):"NF "+(x.f.nf||""),x.f.fornecedor,NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p)]);
+  const auto=all.filter(x=>x.p.tipo==="auto").map(x=>[x.f.numero,x.f.tipo==="ROM"?"Romaneio "+(x.f.romaneio||""):"NF "+(x.f.nf||""),NXIMP.ROT[x.p.campo]||x.p.campo,lin(x.p),x.p.campo==="dataRecebimento"?A.fmtData(x.p.valor):x.p.valor,x.p.regra]);
+  const lac=lacs.map(f=>[f.numero,"Número pulado na sequência do mapa"]);
+  const add=(nome,cab,rows,w)=>{const ws=X.utils.aoa_to_sheet([cab,...rows],{cellDates:true,dateNF:"dd/mm/yyyy"});ws["!cols"]=w.map(x=>({wch:x}));if(rows.length)ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:cab.length-1}})};X.utils.book_append_sheet(wb,ws,nome)};
+  add("Certificados pendentes",["FICHA","NF","FORNECEDOR","DATA RECEBIMENTO","ITEM","DESCRIÇÃO","TAG","UND","QTD","MATERIAL CRÍTICO","COBRADO"],cert,[8,12,34,14,6,60,16,7,8,22,9]);
+  add("Informações faltando",["FICHA","DOCUMENTO","FORNECEDOR","INFORMAÇÃO","ITEM"],falta,[8,22,34,22,6]);
+  add("Preenchidas automaticamente",["FICHA","DOCUMENTO","INFORMAÇÃO","ITEM","VALOR PREENCHIDO","REGRA"],auto,[8,22,22,6,24,60]);
+  add("Números sem ficha",["Nº","OBSERVAÇÃO"],lac,[8,40]);
+  baixarXlsx(wb,`Nexum - Pendências - ${CT().nome} - ${A.hoje()}.xlsx`);
+};
+$("relResumo").onclick=()=>{
+  const X=window.XLSX,wb=X.utils.book_new();
+  const rows=fichas.slice().sort((a,b)=>a.numero-b.numero).map(f=>[f.numero,f.tipo==="ROM"?"Romaneio Anglo":"Nota fiscal",f.tipo==="ROM"?f.romaneio:f.nf,f.fornecedor,f.fornecimento,dataXL(f.dataRecebimento),A.itensValidos(f).length,A.STATUS[f.status]?.rotulo||"",A.CONFER[A.conf(f).situacao],A.pendencias(f).join(", "),NXIMP.faltantes(f).filter(x=>x.tipo==="falta").length,(f.auto||[]).length,f.origem==="importacao"?"Mapa FP-11":f.origem==="campo"?"Campo":"Escritório"]);
+  const cab=["FICHA","TIPO","DOCUMENTO","FORNECEDOR","FORNECIMENTO","DATA RECEBIMENTO","ITENS","STATUS","CONFERÊNCIA","PENDÊNCIAS","INFORMAÇÕES FALTANDO","PREENCHIDAS AUTOMATICAMENTE","ORIGEM"];
+  const ws=X.utils.aoa_to_sheet([cab,...rows],{cellDates:true,dateNF:"dd/mm/yyyy"});ws["!cols"]=[8,14,18,36,20,14,7,18,16,30,10,12,12].map(x=>({wch:x}));ws["!autofilter"]={ref:X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:cab.length-1}})};
+  X.utils.book_append_sheet(wb,ws,"Resumo das fichas");baixarXlsx(wb,`Nexum - Resumo das fichas - ${CT().nome} - ${A.hoje()}.xlsx`);
+};
+
+/* ---------- Importação do histórico (FP-11) ---------- */
+let impRes=null;
+$("btnImpEscolher").onclick=()=>$("impFile").click();
+$("impFile").onchange=async e=>{
+  const file=e.target.files[0];e.target.value="";if(!file)return;
+  $("impRes").innerHTML=`<p class="hint">Lendo ${esc(file.name)}… pode levar alguns segundos.</p>`;
+  await new Promise(r=>setTimeout(r,30));
+  try{const buf=new Uint8Array(await file.arrayBuffer());const wb=NXIMP.lerArquivo(buf);await A.store.carregado;
+    impRes=NXIMP.processar(wb,todas);
+    if(!impRes.length){$("impRes").innerHTML='<p class="hint" style="color:var(--bad)">Não achei nenhuma aba de mapa (FP-11) com o cabeçalho FICHA N° / DESCRIÇÃO nessa planilha.</p>';return}
+    renderImp();
+  }catch(err){console.error(err);$("impRes").innerHTML=`<p class="hint" style="color:var(--bad)">Não consegui ler a planilha: ${esc(err.message||err)}</p>`}
+};
+function renderImp(){
+  $("impRes").innerHTML=impRes.map((r,k)=>{const c=A.CONTRATOS[r.contrato],ja=todas.filter(f=>A.ctrDe(f)===r.contrato&&f.importado&&!f.lacuna).length;
+    const st=A.ORDEM_STATUS.filter(s=>r.porStatus[s]).map(s=>`${r.porStatus[s].toLocaleString("pt-BR")} ${A.STATUS[s].rotulo.toLowerCase()}`).join(" · ");
+    return `<div class="imp-c"><b>${esc(c.nome)}</b><span class="hint">Aba “${esc(r.aba)}”${r.atualizacao?" · atualizada em "+esc(r.atualizacao):""}</span>
+      <span><b>${r.fichas.length.toLocaleString("pt-BR")}</b> fichas (${r.primeira} a ${r.ultima}) · <b>${r.itens.toLocaleString("pt-BR")}</b> itens · ${r.linhas.toLocaleString("pt-BR")} linhas lidas</span>
+      <span>${st}</span>
+      <span><span class="tagauto">${r.autoN.toLocaleString("pt-BR")} preenchidas automaticamente</span> <span class="tagfalta">${r.faltaN.toLocaleString("pt-BR")} faltando</span>${r.lacunas.length?` <span class="tagfalta">${r.lacunas.length} números sem ficha</span>`:""}</span>
+      ${ja?`<span class="hint">Já existem ${ja.toLocaleString("pt-BR")} fichas importadas deste contrato: elas serão substituídas por esta versão. Fichas lançadas no Nexum não são tocadas.</span>`:""}
+      <div><button class="btn primary small" type="button" data-imp="${k}">Importar ${esc(c.nome)}</button></div></div>`}).join("")+(impRes.length>1?`<div><button class="btn small" type="button" id="btnImpTudo">Importar os ${impRes.length} contratos</button></div>`:"");
+  $("impRes").querySelectorAll("[data-imp]").forEach(b=>b.onclick=()=>importar([impRes[+b.dataset.imp]]));
+  const t=$("btnImpTudo");if(t)t.onclick=()=>importar(impRes);
+}
+async function importar(lista){
+  try{for(const r of lista){
+      const novos=r.fichas.filter(f=>!todas.some(o=>A.ctrDe(o)===r.contrato&&!o.importado&&!o.exemplo&&+o.numero===+f.numero));
+      await A.store.importar(r.contrato,novos.concat(r.lacunas));
+    }
+    toast(`Histórico importado: ${lista.map(r=>A.CONTRATOS[r.contrato].nome+" ("+r.fichas.length.toLocaleString("pt-BR")+" fichas)").join(" e ")}`);
+    $("impRes").innerHTML=`<p class="hint" style="color:var(--ok)">✓ Importação concluída. Veja as abas Painel, Fichas, Pendências e Relatórios.</p>`;impRes=null;
+  }catch(e){console.error(e);toast("Não consegui importar: "+(e.message||e),true)}
+}
+
+function renderTudo(){renderPainel();renderLista();renderCerts();renderPend();if(!$("v-rel").hidden)renderRel();renderMapa();renderCad();if(ed)avisos()}
 $("badgeDemo").hidden=A.store.modo!=="exemplo";
 A.cadastros.ouvir(c=>{cad=c;renderCad();if(ed)avisos()});
-A.store.ouvir(l=>{fichas=l;renderTudo()});
+renderCtr();
+let autoT;
+A.store.ouvir(l=>{todas=l;filtrar();if(A.store.modo==="exemplo"){const ex=l.some(f=>f.exemplo);$("badgeDemo").textContent=ex?"Modo exemplo":"Dados só neste computador";$("badgeDemo").title=ex?"Fichas de exemplo para teste":"Os dados ficam salvos neste navegador até o Firebase ser ligado"}renderTudo();clearTimeout(autoT);autoT=setTimeout(()=>autoPreencher(false),1500)});
 })();
 </script>
 </body>

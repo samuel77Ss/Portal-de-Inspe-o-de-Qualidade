@@ -7,6 +7,12 @@
   const DOC_FICHA = "447.OPE.FP-01 Rev.02";
   const DOC_MAPA = "447.QUA.FP-11";
   const FICHA_INICIAL = 2291;
+  /* Contratos: cada um com seus registros, numeração e mapa próprios */
+  const CONTRATOS = {
+    recleaner: { id: "recleaner", nome: "Flotação Recleaner", projeto: "PROJETO FLOTAÇÃO RECLEANER", numero: CONTRATO, obra: OBRA, escopo: ESCOPO, ativo: true, aba: "Mapa Flotação" },
+    espessador: { id: "espessador", nome: "Upgrade do Espessador", projeto: "PROJETO UPGRADE DO ESPESSADOR DE CONCENTRADO", numero: "", obra: "Projeto Upgrade do Espessador de Concentrado", escopo: "Upgrade do Espessador de Concentrado", ativo: false, aba: "Mapa" }
+  };
+  const ctrDe = f => (f && f.contrato) || "recleaner";
 
   const TIPOS = {
     NF: { rotulo: "Nota fiscal", curto: "NF", fornecimento: "MILPLAN ENGENHARIA" },
@@ -66,6 +72,8 @@
     return f.nf ? "NF|" + soDig(f.nf) + "|" + normForn(f.fornecedor) : "";
   }
   function duplicada(f, todas) {
+    const c = ctrDe(f);
+    todas = todas.filter(o => ctrDe(o) === c && !o.lacuna && !(f.importado && o.importado));
     const k = chaveDoc(f);
     const porChave = f.chaveNFe ? todas.find(o => o.id !== f.id && o.chaveNFe === f.chaveNFe) : null;
     if (porChave) return porChave;
@@ -76,9 +84,10 @@
     const doc = f.tipo === "ROM" ? "Romaneio já realizado recebimento" : "NF já realizada recebimento";
     return `${doc} (ficha ${outra.numero}, ${fmtData(outra.dataRecebimento)}).`;
   }
-  function proximoNumero(todas, inicial) {
-    const max = todas.filter(f => !f.exemplo).reduce((m, f) => Math.max(m, +f.numero || 0), 0);
-    return Math.max(max + 1, inicial || FICHA_INICIAL);
+  function proximoNumero(todas, inicial, contrato) {
+    const c = contrato || "recleaner";
+    const max = todas.filter(f => !f.exemplo && ctrDe(f) === c).reduce((m, f) => Math.max(m, +f.numero || 0), 0);
+    return c === "recleaner" ? Math.max(max + 1, inicial || FICHA_INICIAL) : max + 1;
   }
   /* Itens válidos para a ficha: romaneio com quantidade 0 não entra */
   function itensValidos(f) {
@@ -131,7 +140,8 @@
     if (typeof i.exigeCertificado === "boolean") return i.exigeCertificado;
     return !!materialCritico(i.descricao, i.tag);
   }
-  const temCert = i => !!(i.certificado || i.temCertAnexo);
+  const semValorCert = c => /^(N\/?A|OBS\.? ?1)$/i.test(String(c || "").trim());
+  const temCert = i => !!((i.certificado && !semValorCert(i.certificado)) || i.temCertAnexo);
   const STATUS_ITEM = {
     nao_conforme: { rotulo: "Não conforme", cls: "bad" },
     cert_pendente: { rotulo: "Pendente – Certificado", cls: "cert_pendente" },
@@ -259,35 +269,68 @@
     ];
   }
 
-  /* ---------- Armazenamento local (etapa 1) ---------- */
+  /* ---------- Armazenamento local (etapa 1): IndexedDB (cabe o histórico inteiro) + cópia no localStorage quando pequena ---------- */
   const KEY = "amr_recebimento_fichas_v5";
   const ouvintes = new Set();
-  let cache = null;
-  function ler() {
-    if (cache) return cache;
-    try { const s = localStorage.getItem(KEY); cache = s ? JSON.parse(s) : null; } catch (e) { cache = null; }
-    if (!cache) { cache = exemplos(); gravar(); }
-    return cache;
+  let cache = null, pronto = false;
+  const canal = (() => { try { return new BroadcastChannel("nexum-fichas"); } catch (e) { return null; } })();
+  function idb() {
+    return new Promise((res, rej) => { if (!window.indexedDB) return rej(new Error("sem IndexedDB"));
+      const r = indexedDB.open("nexum", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   }
-  function gravar() { try { localStorage.setItem(KEY, JSON.stringify(cache)); } catch (e) { } }
+  async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction("kv").objectStore("kv").get(k); t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }); }
+  async function idbPut(k, v) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+  function lerLS() { try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function ler() { return cache || []; }
+  let gravando = Promise.resolve();
+  function gravar() {
+    const snap = cache;
+    try { const j = JSON.stringify(snap); if (j.length < 1500000) localStorage.setItem(KEY, j); else localStorage.removeItem(KEY); } catch (e) { try { localStorage.removeItem(KEY); } catch (_) { } }
+    gravando = gravando.then(() => idbPut(KEY, snap)).catch(() => { }).then(() => { try { canal && canal.postMessage("mudou"); } catch (e) { } });
+    return gravando;
+  }
   function avisar() { const l = ler().slice(); ouvintes.forEach(fn => { try { fn(l); } catch (e) { } }); }
-  window.addEventListener("storage", e => { if (e.key === KEY) { cache = null; avisar(); } });
+  const carregado = (async () => {
+    let d = null;
+    try { d = await idbGet(KEY); } catch (e) { }
+    if (!d) d = lerLS();
+    cache = d || exemplos(); pronto = true;
+    if (!d) gravar(); else if (!(await idbGet(KEY).catch(() => null))) gravar();
+    avisar();
+  })();
+  async function recarregar() { try { const d = await idbGet(KEY); if (d) { cache = d; avisar(); } } catch (e) { const d = lerLS(); if (d) { cache = d; avisar(); } } }
+  if (canal) canal.onmessage = () => recarregar();
+  window.addEventListener("storage", e => { if (e.key === KEY) recarregar(); });
 
   const store = {
     modo: "exemplo",
-    ouvir(fn) { ouvintes.add(fn); fn(ler().slice()); return () => ouvintes.delete(fn); },
+    carregado,
+    ouvir(fn) { ouvintes.add(fn); if (pronto) fn(ler().slice()); return () => ouvintes.delete(fn); },
     async salvar(f) {
-      f = autoStatus(f);
+      await carregado;
+      f = autoStatus(f); f.contrato = ctrDe(f);
       const todas = ler();
       const dup = duplicada(f, todas);
       if (dup) { const e = new Error(msgDuplicada(f, dup)); e.code = "duplicada"; e.outra = dup; throw e; }
       const agora = new Date().toISOString();
       const i = todas.findIndex(o => o.id === f.id);
       if (i >= 0) todas[i] = { ...todas[i], ...f, atualizadoEm: agora };
-      else { f.id = f.id || "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); f.numero = f.numero || proximoNumero(todas, cadastros.fichaInicial()); f.criadoEm = agora; f.atualizadoEm = agora; todas.push(f); }
+      else { f.id = f.id || "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); f.numero = f.numero || proximoNumero(todas, cadastros.fichaInicial(), f.contrato); f.criadoEm = agora; f.atualizadoEm = agora; todas.push(f); }
       gravar(); avisar(); return f;
     },
-    async excluir(id) { cache = ler().filter(f => f.id !== id); gravar(); avisar(); },
+    /* grava várias fichas de uma vez (preenchimento automático) sem checar duplicidade */
+    async salvarVarias(lista) {
+      await carregado; const agora = new Date().toISOString(), idx = new Map(ler().map((f, i) => [f.id, i]));
+      lista.forEach(f => { const i = idx.get(f.id); if (i !== undefined) cache[i] = { ...cache[i], ...autoStatus(f), atualizadoEm: agora }; });
+      await gravar(); avisar();
+    },
+    /* importação do histórico (FP-11): substitui o que já tinha sido importado daquele contrato e tira os exemplos */
+    async importar(contrato, lista) {
+      await carregado;
+      cache = ler().filter(f => !f.exemplo && !(ctrDe(f) === contrato && f.importado)).concat(lista.map(f => ({ ...f, contrato })));
+      await gravar(); avisar(); return lista.length;
+    },
+    async excluir(id) { await carregado; cache = ler().filter(f => f.id !== id); gravar(); avisar(); },
     async restaurarExemplos() { cache = exemplos(); gravar(); avisar(); }
   };
 
@@ -356,6 +399,6 @@
     return [...new Set([...(fo?.emails || []), ...Object.keys(GRUPOS).flatMap(k => c.grupos[k] || [])])];
   }
 
-  window.AMR = { textoCert, certSituacao, autoStatus, anexarCertificado, temCert, CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { CONTRATOS, ctrDe, textoCert, certSituacao, autoStatus, anexarCertificado, temCert, CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();

@@ -693,7 +693,7 @@ $("badgeDemo").hidden=A.store.modo!=="exemplo";
 let viuSplash=false;try{viuSplash=sessionStorage.getItem("nx_splash")==="1"}catch(e){}
 $("splash").hidden=viuSplash;
 $("btnAcessar").onclick=()=>{$("splash").hidden=true;try{sessionStorage.setItem("nx_splash","1")}catch(e){}};
-A.store.ouvir(l=>{fichas=l;renderRecentes();if(view==="cert")renderPendCert();if(view==="lancar")checarDup()});
+A.store.ouvir(l=>{fichas=l.filter(f=>A.ctrDe(f)==="recleaner"&&!f.lacuna);renderRecentes();if(view==="cert")renderPendCert();if(view==="lancar")checarDup()});
 show("inicio");
 })();
 </script>

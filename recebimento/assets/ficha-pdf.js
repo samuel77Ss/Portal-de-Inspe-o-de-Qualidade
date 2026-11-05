@@ -82,18 +82,18 @@
     const r1 = 6, r2 = 7, r3 = 6.5;
     const [xA, wA] = span("B", "D"), [xB, wB] = span("E", "M"), [xC, wC] = span("N", "Q");
     caixa(doc, xA, y, wA, r1); caixa(doc, xB, y, wB, r1); caixa(doc, xC, y, wC, r1);
-    texto(doc, "CONTRATO Nº: " + A.CONTRATO, xA, y, wA, r1, { fs: 8, b: true });
+    texto(doc, "CONTRATO Nº: " + (cfg.ctr ? cfg.ctr.numero || "" : A.CONTRATO), xA, y, wA, r1, { fs: 8, b: true });
     texto(doc, "CÓDIGO DO DOCUMENTO", xB, y, wB, r1, { fs: 8, b: true, al: "c" });
     texto(doc, "FICHA Nº: " + f.numero, xC, y, wC, r1, { fs: 8.5, b: true });
     y += r1;
     caixa(doc, xA, y, wA, r2); caixa(doc, xB, y, wB, r2); caixa(doc, xC, y, wC, r2);
-    texto(doc, "OBRA: " + A.OBRA, xA, y, wA, r2, { fs: 7, b: true });
+    texto(doc, "OBRA: " + (cfg.ctr ? cfg.ctr.obra : A.OBRA), xA, y, wA, r2, { fs: 7, b: true });
     texto(doc, A.DOC_FICHA, xB, y, wB, r2, { fs: 8.5, b: true, al: "c" });
     texto(doc, "RESPONSÁVEL POR ESTE DOCUMENTO: " + (cfg.responsavel || ""), xC, y, wC, r2, { fs: 7, b: true });
     y += r2;
     const [xE, wE] = span("B", "L"), [xP, wP] = span("M", "O"), [xF, wF] = span("P", "Q");
     caixa(doc, xE, y, wE, r3); caixa(doc, xP, y, wP, r3); caixa(doc, xF, y, wF, r3);
-    texto(doc, "Escopo: " + A.ESCOPO, xE, y, wE, r3, { fs: 7, b: true });
+    texto(doc, "Escopo: " + (cfg.ctr ? cfg.ctr.escopo : A.ESCOPO), xE, y, wE, r3, { fs: 7, b: true });
     texto(doc, "Projeto N° Cliente: " + (cfg.projetoCliente || ""), xP, y, wP, r3, { fs: 7, b: true });
     texto(doc, `FOLHA: ${nFolha}/${totFolhas}`, xF, y, wF, r3, { fs: 7.5, b: true });
     y += r3;
@@ -148,20 +148,21 @@
     doc.setTextColor(0);
   }
 
-  function gerar(A, f, cfg) {
+  function gerar(A, f, cfg, docExistente) {
     if (!window.jspdf) throw new Error("O gerador de PDF não carregou. Verifique a internet e recarregue a página.");
-    const doc = new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const doc = docExistente || new window.jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    if (docExistente) doc.addPage("a4", "landscape");
     const linhas = linhasDaFicha(A, f);
     const tot = Math.max(1, Math.ceil(linhas.length / ITENS_POR_FOLHA));
     for (let p = 0; p < tot; p++) {
       if (p) doc.addPage("a4", "landscape");
       folha(doc, A, f, linhas.slice(p * ITENS_POR_FOLHA, (p + 1) * ITENS_POR_FOLHA), p + 1, tot, cfg || {});
     }
-    doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "Nexum" });
+    if (!docExistente) doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "Nexum" });
     return doc;
   }
   function nomeArquivo(A, f) {
-    const limpo = s => String(s || "").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
+    const limpo = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
     const doc = f.tipo === "ROM" ? "Romaneio " + f.romaneio : "NF " + f.nf + " - " + f.fornecedor;
     return limpo(`447.OPE.FP-01 - Ficha ${f.numero} - ${doc}`).slice(0, 150) + ".pdf";
   }
