@@ -147,7 +147,7 @@
     });
     /* Rodapé discreto: rastreabilidade */
     doc.setFont("helvetica", "normal"); doc.setFontSize(5.5); doc.setTextColor(120);
-    doc.text(`Gerado pelo RECEB+ em ${new Date().toLocaleString("pt-BR")}${f.chaveNFe ? " · Chave NF-e " + f.chaveNFe : ""}`, M, H - 2.5);
+    doc.text(`Gerado pelo Nexum em ${new Date().toLocaleString("pt-BR")}${f.chaveNFe ? " · Chave NF-e " + f.chaveNFe : ""}`, M, H - 2.5);
     doc.setTextColor(0);
   }
 
@@ -160,7 +160,7 @@
       if (p) doc.addPage("a4", "landscape");
       folha(doc, A, f, linhas.slice(p * ITENS_POR_FOLHA, (p + 1) * ITENS_POR_FOLHA), p + 1, tot, cfg || {});
     }
-    doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "RECEB+" });
+    doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "Nexum" });
     return doc;
   }
   function nomeArquivo(A, f) {

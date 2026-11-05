@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1f2d35">
-<title>RECEB+ Escritório</title>
+<meta name="theme-color" content="#0b2d5b">
+<title>Nexum Escritório</title>
 <link rel="icon" href="assets/favicon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="assets/base.css">
 <style>
 /* Painel do escritório: abas no cabeçalho; indicadores por status; fichas em cartões; mapa FP-11 em tabela rolável; cadastros em colunas */
@@ -14,8 +14,8 @@ html{padding-top:env(safe-area-inset-top,0px)}
 main{padding-block:18px 60px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis .k:first-child{grid-column:1/-1}}
-.k{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:grid;gap:2px;border-top:4px solid var(--line)}
-.k b{font-family:var(--f-display);font-size:2.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.k{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;text-align:left;font:inherit;color:inherit;display:grid;gap:2px;border-top:4px solid var(--line)}
+.k b{font-family:var(--f-display);font-weight:700;font-size:2rem;line-height:1;font-variant-numeric:tabular-nums}
 .k span{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 .k em{font-style:normal;font-size:.76rem;color:var(--muted)}
 .k.sem_acao{border-top-color:var(--idle)} .k.em_andamento{border-top-color:var(--wait)} .k.cert_pendente{border-top-color:var(--warn)} .k.finalizado{border-top-color:var(--ok)}
@@ -125,10 +125,8 @@ td.ck input{width:18px;height:18px;min-height:0}
 .cob-mail{display:grid;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px}
 .cob-mail pre{margin:0;white-space:pre-wrap;font:inherit;font-size:.84rem;max-height:280px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px}
 
-.marca{display:flex;align-items:center;gap:10px;min-width:0}
-.marca img{width:34px;height:34px;border-radius:7px;flex:0 0 auto}
-.wm{font-family:var(--f-display);font-weight:800;letter-spacing:.01em;line-height:1}
-.wm .plus{color:#e58a3c;margin-left:1px}
+.marca{display:flex;align-items:center;gap:12px;min-width:0}
+.marca .nx-mark{width:40px}
 /* cadastros */
 .cad{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:start}
 @media (max-width:860px){.cad{grid-template-columns:1fr}}
@@ -145,7 +143,8 @@ td.ck input{width:18px;height:18px;min-height:0}
 <header class="top">
   <div class="wrap">
     <div class="hbar">
-      <div class="grow marca"><img src="assets/marca-icone.png" alt=""><div><h1 class="wm">RECEB<span class="plus">+</span></h1><small>RECEBIMENTO DE MATERIAIS · AMR · FLOTAÇÃO RECLEANER · ESCRITÓRIO</small></div></div>
+      <div class="grow marca"><svg class="nx-mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80"><defs><linearGradient id="ofa" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6e6fa"/></linearGradient><linearGradient id="ofb" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2D8CFF"/><stop offset="1" stop-color="#8CC2FF"/></linearGradient></defs><path fill="url(#ofa)" d="M3 76 30 6h17L20 76z"/><path fill="url(#ofa)" opacity=".82" d="M30 6h17l19 49-9 21z"/><path fill="url(#ofb)" d="M42 54 57 76h7L99 3 88 7 61 63 52 47z"/></svg>
+<span style="width:1px;height:34px;background:var(--head-line)"></span><div><h1 class="wm">Nexum</h1><small>Recebimento <span class="wm-tag" style="font-weight:700">inteligente</span> · AMR · Flotação Recleaner · Escritório</small></div></div>
       <span class="badge-demo" id="badgeDemo">Modo exemplo</span>
     </div>
     <nav class="tabs" role="tablist">
