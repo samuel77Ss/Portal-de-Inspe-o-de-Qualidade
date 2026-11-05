@@ -134,8 +134,8 @@
   const temCert = i => !!(i.certificado || i.temCertAnexo);
   const STATUS_ITEM = {
     nao_conforme: { rotulo: "Não conforme", cls: "bad" },
-    cert_pendente: { rotulo: "Certificado pendente", cls: "cert_pendente" },
-    cert_a_validar: { rotulo: "Certificado a validar", cls: "em_andamento" },
+    cert_pendente: { rotulo: "Pendente – Certificado", cls: "cert_pendente" },
+    cert_a_validar: { rotulo: "Certificado recebido · a validar", cls: "em_andamento" },
     aguardando: { rotulo: "Aguardando conferência", cls: "sem_acao" },
     conforme: { rotulo: "Conforme", cls: "finalizado" }
   };
@@ -174,13 +174,45 @@
 
   /* Linhas do mapa (FP-11): uma por item */
   const COLS_MAPA = ["STATUS", "FICHA N°", "ITEM", "DESCRIÇÃO", "TAG", "NOTA FISCAL", "ROMANEIO", "CERTIFICADO", "UND", "QUANT RECEBIDA", "DATA RECEBIMENTO", "FORNECIMENTO", "FORNECEDOR", "LOCALIZAÇÃO/ARMAZENAMENTO", "STATUS ITEM"];
+  /* Texto do certificado no relatório e no mapa */
+  function textoCert(f, i) {
+    if (f.tipo === "ROM") return i.certificado || "OBS 1";
+    if (i.certificado) return i.certificado;
+    if (i.temCertAnexo) return "RECEBIDO";
+    return exigeCert(f, i) ? "PENDENTE – CERTIFICADO" : "N/A";
+  }
+  /* Situação do certificado de um item: nao_exige | pendente | recebido | validado */
+  function certSituacao(f, i) {
+    if (!exigeCert(f, i)) return temCert(i) ? (i.certValidado ? "validado" : "recebido") : "nao_exige";
+    if (!temCert(i)) return "pendente";
+    return i.certValidado ? "validado" : "recebido";
+  }
+  /* Ajusta o status da ficha conforme as pendências de certificado (não mexe em "sem ação" nem "finalizado") */
+  function autoStatus(f) {
+    if (f.tipo !== "NF" || f.status === "sem_acao" || f.status === "finalizado") return f;
+    const pend = itensValidos(f).some(i => exigeCert(f, i) && !temCert(i));
+    if (pend && f.status === "em_andamento") return { ...f, status: "cert_pendente" };
+    if (!pend && f.status === "cert_pendente") return { ...f, status: "em_andamento" };
+    return f;
+  }
+  /* Anexa certificado a um item já lançado (pelo campo ou escritório) e resolve a pendência */
+  function anexarCertificado(f, idx, d, por) {
+    const g = JSON.parse(JSON.stringify(f));
+    const it = g.itens[idx]; if (!it) return f;
+    if (d.numero) it.certificado = String(d.numero).trim().toUpperCase();
+    const novos = (d.anexos || []).map((a, k) => ({ ...a, item: idx, nome: `Item ${idx + 1} · ${it.certificado ? "certificado " + it.certificado : "certificado"}${(d.anexos || []).length > 1 ? " (" + (k + 1) + ")" : ""}` }));
+    if (novos.length) { it.temCertAnexo = true; g.anexos = g.anexos || {}; g.anexos.cert = [...(g.anexos.cert || []), ...novos]; }
+    it.certStatus = "recebido"; it.certValidado = false;
+    let h = marcarConferencia(g, "cert_recebido", { por: por || "", itensTxt: String(idx + 1) + (it.certificado ? " (" + it.certificado + ")" : "") });
+    return autoStatus(h);
+  }
   function linhasMapa(fichas) {
     const out = [];
     fichas.slice().sort((a, b) => a.numero - b.numero).forEach(f => {
       const its = itensValidos(f);
       const base = [STATUS[f.status]?.rotulo || "", String(f.numero)];
       if (!its.length) { out.push([...base, "", "", "", f.tipo === "ROM" ? "N/A" : f.nf, f.romaneio, "", "", "", fmtData(f.dataRecebimento), f.fornecimento, f.fornecedor, "", ""]); return; }
-      its.forEach((i, n) => out.push([...base, n + 1, i.descricao, i.tag, f.tipo === "ROM" ? "N/A" : f.nf, f.romaneio, i.certificado || (f.tipo === "ROM" ? "OBS 1" : ""), i.und, fmtQtd(i.qtd), fmtData(f.dataRecebimento), f.fornecimento, f.fornecedor, i.local, i.conf || ""]));
+      its.forEach((i, n) => out.push([...base, n + 1, i.descricao, i.tag, f.tipo === "ROM" ? "N/A" : f.nf, f.romaneio, textoCert(f, i), i.und, fmtQtd(i.qtd), fmtData(f.dataRecebimento), f.fornecimento, f.fornecedor, i.local, i.conf || ""]));
     });
     return out.map(limpa);
   }
@@ -245,6 +277,7 @@
     modo: "exemplo",
     ouvir(fn) { ouvintes.add(fn); fn(ler().slice()); return () => ouvintes.delete(fn); },
     async salvar(f) {
+      f = autoStatus(f);
       const todas = ler();
       const dup = duplicada(f, todas);
       if (dup) { const e = new Error(msgDuplicada(f, dup)); e.code = "duplicada"; e.outra = dup; throw e; }
@@ -323,6 +356,6 @@
     return [...new Set([...(fo?.emails || []), ...Object.keys(GRUPOS).flatMap(k => c.grupos[k] || [])])];
   }
 
-  window.AMR = { temCert, CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
+  window.AMR = { textoCert, certSituacao, autoStatus, anexarCertificado, temCert, CMC, LEGENDA_CMC, materialCritico, exigeCert, STATUS_ITEM, statusItem, semCertificado, pendentesDeCobranca, montarEmailCobranca, registrarCobranca, registrar: marcarConferencia, lerChaveNFe, soCnpj, MOTIVOS, CONFER, conf, marcarConferencia, GRUPOS, cadastros, destinatariosCertPendente, emailOk, CONTRATO, OBRA, ESCOPO, DOC_FICHA, DOC_MAPA, FICHA_INICIAL, TIPOS, STATUS, ORDEM_STATUS, CONF, UNIDADES, OBS_ANGLO, COLS_MAPA,
     norm, normForn, hoje, fmtData, fmtQtd, chaveDoc, duplicada, msgDuplicada, proximoNumero, itensValidos, pendencias, linhasMapa, csvMapa, store };
 })();

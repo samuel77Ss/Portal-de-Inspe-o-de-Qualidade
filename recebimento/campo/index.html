@@ -62,7 +62,18 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .certsec{display:grid;gap:10px;border:1px dashed var(--line);border-radius:8px;padding:10px;background:var(--surface)}
 .certsec.req{border-color:var(--warn)}
 .certsec.ok{border-color:var(--ok);border-style:solid}
-.certsec.nr{border-color:var(--bad);border-style:solid;background:var(--bad-bg)}
+.certsec.nr{border-color:var(--warn);border-style:solid;background:var(--warn-bg)}
+.semcert{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);cursor:pointer}
+.semcert input{width:22px;height:22px;min-height:0;flex:0 0 auto;accent-color:var(--warn)}
+.semcert small{color:var(--muted);font-size:.74rem}
+.pc-item{display:grid;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.pc-item:last-child{border-bottom:0}
+.pc-item .pc-t{font-weight:600;font-size:.88rem;color:var(--ink)}
+.pc-item .pc-m{font-size:.76rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.pc-item .pc-a{display:flex;gap:8px;flex-wrap:wrap}
+.pc-item .pc-a input{flex:1 1 120px;min-width:0;min-height:40px}
+.pc-item .pc-a .btn{flex:1 1 auto;min-height:40px;font-size:.82rem}
+.rs.clic{cursor:pointer;font:inherit;color:inherit;text-align:left}
 .certsec .cs-h{display:flex;align-items:center;gap:8px;font:700 .8rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .certsec .cs-st{font-size:.78rem;font-weight:600}
 .certsec .shot-btns .btn{min-height:40px;font-size:.84rem}
@@ -265,6 +276,11 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
   </section>
 
   <!-- ENVIADO -->
+  <section id="v-cert" hidden>
+    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:.84rem">Itens recebidos <b>sem certificado</b>. Quando o certificado chegar, fotografe ou anexe aqui: a pendência sai da ficha e do relatório automaticamente.</p>
+    <div id="pcLista"></div>
+  </section>
+
   <section id="v-ok" hidden>
     <div class="done rise">
       <span class="lbl">Ficha Nº</span>
@@ -311,11 +327,13 @@ function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(ba
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 function show(v){
-  view=v;["inicio","lancar","ok"].forEach(x=>$("v-"+x).hidden=x!==v);
+  view=v;["inicio","lancar","ok","cert"].forEach(x=>$("v-"+x).hidden=x!==v);
+  if(v==="cert")renderPendCert();
   $("bar").hidden=v!=="lancar"; $("btnVoltar").hidden=v==="inicio";
   $("hSub").textContent=v==="lancar"?(editando?"FICHA Nº "+editando.numero+" · CORREÇÃO":"PRÓXIMA FICHA Nº "+A.proximoNumero(fichas,A.cadastros.fichaInicial())):"Recebimento inteligente · AMR · Campo";
-  if(v==="lancar"){$("hTitulo").textContent=editando?"Corrigir recebimento":"Novo recebimento";$("hTitulo").classList.remove("wm")}else{$("hTitulo").textContent="Nexum";$("hTitulo").classList.add("wm")}
-  $("hIcone").hidden=v==="lancar";
+  if(v==="cert"){$("hTitulo").textContent="Certificados pendentes";$("hTitulo").classList.remove("wm");$("hSub").textContent="Anexe quando o certificado chegar"}
+  else if(v==="lancar"){$("hTitulo").textContent=editando?"Corrigir recebimento":"Novo recebimento";$("hTitulo").classList.remove("wm")}else{$("hTitulo").textContent="Nexum";$("hTitulo").classList.add("wm")}
+  $("hIcone").hidden=v==="lancar"||v==="cert";
   window.scrollTo(0,0);
 }
 $("btnVoltar").onclick=()=>show("inicio");
@@ -337,7 +355,32 @@ function renderResumo(){
   const nDev=fichas.filter(f=>A.conf(f).situacao==="devolvida").length;
   const nCert=fichas.filter(f=>f.tipo==="NF"&&f.status!=="finalizado").reduce((s,f)=>s+A.semCertificado(f).length,0);
   $("resumo").innerHTML=[["a","truck",nHoje,"Recebidos hoje"],["b","undo",nDev,"Para corrigir"],["c","cert",nCert,"Certificados pendentes"]]
-    .map(([c,i,n,t])=>`<div class="rs ${c}"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t}</small></div>`).join("");
+    .map(([c,i,n,t])=>c==="c"?`<button type="button" class="rs c clic" id="rsCert"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t} ›</small></button>`:`<div class="rs ${c}"><span class="ri">${NXUI.icon(i)}</span><b>${n}</b><small>${t}</small></div>`).join("");
+  $("rsCert").onclick=()=>show("cert");
+}
+function pendenciasCert(){
+  return fichas.filter(f=>f.tipo==="NF"&&f.status!=="finalizado").flatMap(f=>A.itensValidos(f).map(it=>({f,it,idx:f.itens.indexOf(it)})).filter(x=>A.certSituacao(x.f,x.it)==="pendente"))
+    .sort((a,b)=>(a.f.dataRecebimento||"").localeCompare(b.f.dataRecebimento||""));
+}
+function renderPendCert(){
+  const l=pendenciasCert(),el=$("pcLista");
+  if(!l.length){el.className="";el.innerHTML='<div class="empty"><strong>Nenhum certificado pendente</strong>Todos os materiais críticos recebidos estão com certificado.</div>';return}
+  el.className="lista-g";
+  el.innerHTML=l.map((x,k)=>{const dias=Math.max(0,Math.round((Date.now()-new Date((x.f.dataRecebimento||A.hoje())+"T12:00:00"))/864e5));
+    return `<div class="pc-item" data-k="${k}">
+      <div class="pc-m"><span class="pill cert_pendente">Pendente – Certificado</span><span>Ficha ${x.f.numero}</span><span>NF ${esc(x.f.nf)}</span><span>${dias===0?"recebido hoje":"há "+dias+(dias===1?" dia":" dias")}</span></div>
+      <div class="pc-t">Item ${x.idx+1} · ${esc(x.it.descricao)}</div>
+      <div class="pc-m"><span>${esc(x.f.fornecedor)}</span><span>${esc(x.it.tag||"")}</span><span>${A.fmtQtd(x.it.qtd)} ${esc(x.it.und)}</span></div>
+      <div class="pc-a"><input placeholder="Nº (opcional)" data-num autocomplete="off"><button class="btn primary" type="button" data-foto>Fotografar</button><button class="btn" type="button" data-arq>Anexar</button></div>
+    </div>`}).join("");
+  el.querySelectorAll(".pc-item").forEach(row=>{
+    const x=l[+row.dataset.k];
+    const salvar=files=>{const tmp=[];lerFotos(files,tmp,async()=>{if(tmp.length<files.length)return;
+      const g=A.anexarCertificado(x.f,x.idx,{numero:row.querySelector("[data-num]").value,anexos:tmp},"Campo");
+      try{await A.store.salvar(g);toast(`Certificado anexado ao item ${x.idx+1} da ficha ${x.f.numero} · pendência resolvida`);renderPendCert()}catch(e){toast("Não foi possível salvar.",true)}})};
+    row.querySelector("[data-foto]").onclick=()=>escolherArquivo(true,salvar);
+    row.querySelector("[data-arq]").onclick=()=>escolherArquivo(false,salvar);
+  });
 }
 function renderRecentes(){
   renderDevolvidas();renderResumo();
@@ -394,17 +437,14 @@ function certSecao(it,i){
   const cr=A.materialCritico(it.descricao,it.tag),ex=A.exigeCert({tipo},it),fotos=it.certAnexos||[];
   const tem=!!(it.certificado||fotos.length), nr=it.certStatus==="nao_recebido";
   const estado=nr?"nao_recebido":(tem||it.certStatus==="recebido")?"recebido":"";
-  const st=nr?'<span class="cs-st" style="color:var(--bad)">✕ Certificado NÃO recebido · o fornecedor será cobrado</span>'
+  const st=nr?'<span class="cs-st" style="color:var(--warn)">Pendente – Certificado · o fornecedor será cobrado e a pendência sai quando o certificado for anexado</span>'
     :tem?`<span class="cs-st" style="color:var(--ok)">✓ Certificado ${it.certificado?esc(it.certificado):""}${fotos.length?` · ${fotos.length} ${fotos.length===1?"arquivo":"arquivos"}`:""}</span>`
     :estado==="recebido"?'<span class="cs-st" style="color:var(--warn)">Informe o nº ou anexe a foto do certificado</span>'
-    :ex?'<span class="cs-st" style="color:var(--warn)">Escolha: o certificado veio junto com o material?</span>':'<span class="cs-st" style="color:var(--muted)">Não exige certificado</span>';
+    :ex?'<span class="cs-st" style="color:var(--warn)">Anexe o certificado ou marque "Sem certificado"</span>':'<span class="cs-st" style="color:var(--muted)">Não exige certificado</span>';
   return `<div class="certsec ${nr?"nr":tem?"ok":ex?"req":""}">
       <div class="cs-h">Certificado do item ${i+1}</div>
       <label class="excert"><input type="checkbox" data-ex ${ex?"checked":""} ${nr?"disabled":""}><span>Exige certificado de qualidade${cr?`<br><span style="color:var(--warn);font-size:.78rem;font-weight:600">Material crítico (CMC): ${esc(cr.rotulo)} · CQ ${esc(cr.cq)}</span><br><span style="color:var(--muted);font-size:.76rem">${esc(cr.evidencia||"")}</span>`:""}${!cr&&it.pedidoPedeCertificado?`<br><span style="color:var(--muted);font-size:.78rem">O pedido de compra pede certificado</span>`:""}</span></label>
-      <div class="seg certseg" role="group" aria-label="Certificado do item ${i+1}">
-        <button type="button" data-cst="recebido" class="C" aria-pressed="${estado==="recebido"}">Recebido</button>
-        <button type="button" data-cst="nao_recebido" class="NC" aria-pressed="${nr}">Não recebido</button>
-      </div>
+      <label class="semcert"><input type="checkbox" data-semcert ${nr?"checked":""}><span><b>Sem certificado</b><br><small>Material recebido sem o certificado</small></span></label>
       ${nr?"":`<div class="f"><label>Nº do certificado</label><input data-k="certificado" value="${esc(it.certificado)}" autocomplete="off" placeholder="${ex?"Ex.: 3023651":"Se houver"}"></div>
       <div class="shot-btns"><button class="btn" type="button" data-certfoto>Fotografar certificado</button><button class="btn" type="button" data-certarq>Galeria / PDF</button></div>
       ${fotos.length?`<div class="thumbs">${fotos.map((f,k)=>`<figure>${f.pdf?`<div style="width:76px;height:96px;border:1px solid var(--line);border-radius:6px;display:grid;place-items:center;font:600 .75rem var(--f-mono);color:var(--muted)">PDF</div>`:`<img src="${f.img||f.thumb}" alt="Certificado ${k+1} do item ${i+1}">`}<button type="button" aria-label="Remover arquivo" data-rc="${k}">×</button></figure>`).join("")}</div>`:""}`}
@@ -444,11 +484,11 @@ function renderItens(){
     const okb=el.querySelector("[data-okNF]");if(okb)okb.onclick=()=>{itens[i].conferirNF=false;renderItens()};
     el.querySelectorAll('[data-k="qtd"],[data-k="und"]').forEach(x=>x.addEventListener("change",()=>{if(itens[i].conferirNF){itens[i].conferirNF=false;renderItens()}}));
     const exb=el.querySelector("[data-ex]");if(exb)exb.onchange=()=>{itens[i].exigeCertificado=exb.checked;renderItens()};
-    el.querySelectorAll("[data-cst]").forEach(b=>b.onclick=()=>{const v=b.dataset.cst;
-      if(v==="nao_recebido"){if(((itens[i].certAnexos||[]).length||itens[i].certificado)&&!b.dataset.ok){b.dataset.ok=1;toast("Este item tem certificado informado. Toque de novo para marcar como não recebido e apagar o certificado.",true);return}
+    const sc=el.querySelector("[data-semcert]");if(sc)sc.onchange=()=>{
+      if(sc.checked){if(((itens[i].certAnexos||[]).length||itens[i].certificado)&&!sc.dataset.ok){sc.dataset.ok=1;sc.checked=false;toast("Este item já tem certificado. Marque de novo para apagar o certificado e registrar como sem certificado.",true);return}
         itens[i].certificado="";itens[i].certAnexos=[];itens[i].certStatus="nao_recebido"}
-      else itens[i].certStatus="recebido";
-      renderItens()});
+      else itens[i].certStatus=undefined;
+      renderItens()};
     const addCert=files=>{itens[i].certStatus="recebido";lerFotos(files,itens[i].certAnexos=itens[i].certAnexos||[],()=>renderItens())};
     const cf=el.querySelector("[data-certfoto]");if(cf)cf.onclick=()=>escolherArquivo(true,addCert);
     const ca=el.querySelector("[data-certarq]");if(ca)ca.onclick=()=>escolherArquivo(false,addCert);
@@ -465,7 +505,7 @@ $("localPadrao").addEventListener("change",()=>{const v=$("localPadrao").value.t
 function lerFotos(files,arr,depois){
   const fim=depois||renderThumbs;
   [...files].forEach(file=>{
-    if(file.type==="application/pdf"){arr.push({nome:file.name,pdf:true});fim();return}
+    if(file.type==="application/pdf"){if(file.size>2.5e6){toast("PDF muito grande ("+(file.size/1e6).toFixed(1)+" MB). Use até 2,5 MB ou fotografe o certificado.",true);return}const fr=new FileReader();fr.onload=()=>{arr.push({nome:file.name,pdf:true,data:fr.result});fim()};fr.readAsDataURL(file);return}
     const img=new Image(),url=URL.createObjectURL(file);
     img.onload=()=>{const s=Math.min(1,1100/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);arr.push({nome:file.name,img:c.toDataURL("image/jpeg",.6)});URL.revokeObjectURL(url);fim()};
     img.src=url;
@@ -617,7 +657,7 @@ async function enviar(status){
   if(editando)status=editando.status==="sem_acao"?"em_andamento":(editando.status==="cert_pendente"?"em_andamento":editando.status);
   if(tipo==="NF"&&status==="em_andamento"){
     const indef=f.itens.map((it,n)=>({it,n})).filter(({it})=>(it.descricao||it.tag)&&A.exigeCert(f,it)&&!A.temCert(it)&&it.certStatus!=="nao_recebido");
-    if(indef.length){toast(`Item ${indef.map(x=>x.n+1).join(", ")}: anexe o certificado ou marque "Não recebido".`,true);$("itens").querySelector(`[data-i="${indef[0].n}"] .certsec`)?.scrollIntoView({behavior:"smooth",block:"center"});return}
+    if(indef.length){toast(`Item ${indef.map(x=>x.n+1).join(", ")}: anexe o certificado ou marque "Sem certificado".`,true);$("itens").querySelector(`[data-i="${indef[0].n}"] .certsec`)?.scrollIntoView({behavior:"smooth",block:"center"});return}
   }
   const naoConf=A.itensValidos(f).filter(i=>i.conferirNF).length;
   if(naoConf&&!enviar.avisado){enviar.avisado=true;toast(`${naoConf} item(ns) ainda não conferidos com a NF (quantidade e unidade). Confira ou toque em Enviar de novo.`,true);setTimeout(()=>enviar.avisado=false,8000);return}
@@ -653,7 +693,7 @@ $("badgeDemo").hidden=A.store.modo!=="exemplo";
 let viuSplash=false;try{viuSplash=sessionStorage.getItem("nx_splash")==="1"}catch(e){}
 $("splash").hidden=viuSplash;
 $("btnAcessar").onclick=()=>{$("splash").hidden=true;try{sessionStorage.setItem("nx_splash","1")}catch(e){}};
-A.store.ouvir(l=>{fichas=l;renderRecentes();if(view==="lancar")checarDup()});
+A.store.ouvir(l=>{fichas=l;renderRecentes();if(view==="cert")renderPendCert();if(view==="lancar")checarDup()});
 show("inicio");
 })();
 </script>

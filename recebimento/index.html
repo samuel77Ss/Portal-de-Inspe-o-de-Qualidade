@@ -191,6 +191,12 @@ td.ck input{width:18px;height:18px;min-height:0}
 .col .fc-r{justify-items:start}
 .col .fc-l{width:100%}
 .tbl-f{border-radius:14px;box-shadow:var(--shadow)}
+.tab-n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:#c98500;color:#fff;font:700 .68rem var(--f-body);vertical-align:1px}
+table.ct tbody tr{cursor:default}
+table.ct td.it{max-width:340px}
+table.ct .cn{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+table.ct .cn input{width:150px;padding:6px 8px;font-size:.82rem}
+table.ct .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 table.ft{border-collapse:collapse;width:100%;min-width:900px;font-size:.84rem}
 table.ft th{background:var(--surface-2);color:var(--muted);font:700 .7rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:10px 12px;white-space:nowrap}
 table.ft td{padding:11px 12px;border-top:1px solid var(--line);vertical-align:middle}
@@ -223,6 +229,7 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-v="painel" aria-selected="true">Painel</button>
       <button class="tab" role="tab" data-v="fichas" aria-selected="false">Fichas</button>
+      <button class="tab" role="tab" data-v="certs" aria-selected="false">Certificados <span class="tab-n" id="tabCertN" hidden></span></button>
       <button class="tab" role="tab" data-v="mapa" aria-selected="false">Mapa FP-11</button>
       <button class="tab" role="tab" data-v="cadastros" aria-selected="false">Cadastros</button>
     </nav>
@@ -255,6 +262,16 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
     </div>
     <div class="chips" id="chips"></div>
     <div class="tbl-wrap tbl-f"><table class="ft" id="lista"></table></div>
+  </section>
+
+  <section id="v-certs" hidden>
+    <div class="sec-h" style="margin-bottom:10px"><div><h2 style="margin:0;font:700 1.15rem var(--f-head)">Certificados</h2><p class="hint" style="margin:2px 0 0">Itens que exigem certificado (CMC). Ao anexar, a pendência sai sozinha e a ficha e o relatório se atualizam.</p></div></div>
+    <div class="filters">
+      <input id="qCert" type="search" placeholder="Buscar ficha, NF, fornecedor, item, TAG, nº do certificado…" aria-label="Buscar certificados">
+    </div>
+    <div class="chips" id="chipsCert"></div>
+    <div class="tbl-wrap tbl-f"><table class="ft ct" id="tCert"></table></div>
+    <input type="file" id="certFile" accept="image/*,application/pdf" multiple hidden>
   </section>
 
   <section id="v-mapa" hidden>
@@ -436,7 +453,7 @@ let fichas=[],cad=null,fStatus="todas",ed=null,edItens=[];
 function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(bad?" bad":"");e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 
 /* abas */
-function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));["painel","fichas","mapa","cadastros"].forEach(x=>$("v-"+x).hidden=x!==v)}
+function show(v){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));["painel","fichas","certs","mapa","cadastros"].forEach(x=>$("v-"+x).hidden=x!==v);if(v==="certs")renderCerts()}
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.v));
 
 function docTxt(f){return f.tipo==="ROM"?"Romaneio "+(f.romaneio||"—"):"NF "+(f.nf||"—")+" · "+(f.fornecedor||"—")}
@@ -650,7 +667,8 @@ function renderViewer(){
   $("vTabs").innerHTML=`<div class="seg" style="width:100%">${tabs.map(([k,l,a])=>`<button type="button" data-vt="${k}" aria-pressed="${k===vTab}">${l} (${a.length})</button>`).join("")}</div>`;
   $("vTabs").querySelectorAll("[data-vt]").forEach(b=>b.onclick=()=>{vTab=b.dataset.vt;vIdx=0;renderViewer()});
   const arr=vTab==="cert"?certs:docs,cur=arr[vIdx];
-  $("vStage").innerHTML=cur?(cur.img?`<img src="${cur.img}" alt="${esc(cur.nome||"Documento")}">`:`<div class="none">Arquivo PDF: ${esc(cur.nome||"")}<br>A visualização de PDF entra na etapa 3.</div>`):`<div class="none">${vTab==="cert"?"Nenhum certificado anexado.":"Nenhuma foto do documento."}<br>Se faltar, devolva ao campo pedindo a foto.</div>`;
+  $("vStage").innerHTML=cur?(cur.img?`<img src="${cur.img}" alt="${esc(cur.nome||"Documento")}">`:`<div class="none">Arquivo PDF: ${esc(cur.nome||"")}<br>${cur.data?'<button class="btn small" type="button" id="vPdfAbrir">Abrir PDF</button>':"Arquivo registrado só pelo nome."}</div>`):`<div class="none">${vTab==="cert"?"Nenhum certificado anexado.":"Nenhuma foto do documento."}<br>Se faltar, devolva ao campo pedindo a foto.</div>`;
+  const vpa=$("vPdfAbrir");if(vpa)vpa.onclick=e=>{e.stopPropagation();abrirArquivo(cur)};
   $("vStage").onclick=()=>{if(cur&&cur.img){$("lbImg").src=cur.img;$("lb").classList.remove("zoom");$("lb").hidden=false}};
   $("vThumbs").innerHTML=arr.length>1?arr.map((a,i)=>`<button type="button" data-vi="${i}" aria-pressed="${i===vIdx}" aria-label="Página ${i+1}">${a.img?`<img src="${a.img}" alt="">`:'<span class="code" style="display:grid;place-items:center;width:58px;height:58px">PDF</span>'}</button>`).join(""):"";
   $("vThumbs").querySelectorAll("[data-vi]").forEach(b=>b.onclick=()=>{vIdx=+b.dataset.vi;renderViewer()});
@@ -660,7 +678,7 @@ $("lbClose").onclick=()=>$("lb").hidden=true;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("lb").hidden){$("lb").hidden=true;e.stopImmediatePropagation()}},true);
 
 /* conferência */
-const ACOES={enviada:"Enviada pelo campo",reenviada:"Reenviada corrigida pelo campo",aprovada:"Conferência aprovada",devolvida:"Devolvida ao campo como inconforme",anexos:"Documentos anexados",cert_vinculado:"Certificado vinculado",cert_validado:"Certificado validado",cert_nao_recebido:"Certificado não recebido (informado pelo campo)",email:"Cobrança de certificado enviada"};
+const ACOES={enviada:"Enviada pelo campo",reenviada:"Reenviada corrigida pelo campo",aprovada:"Conferência aprovada",devolvida:"Devolvida ao campo como inconforme",anexos:"Documentos anexados",cert_vinculado:"Certificado vinculado",cert_validado:"Certificado validado",cert_nao_recebido:"Sem certificado (informado pelo campo)",cert_recebido:"Certificado recebido (anexado depois)",email:"Cobrança de certificado enviada"};
 function renderConf(){
   const c=A.conf(ed);
   $("dConf").className="pill "+(c.situacao==="aprovada"?"finalizado":c.situacao==="devolvida"?"bad":"em_andamento");
@@ -756,7 +774,63 @@ $("btnDlTestar").onclick=async()=>{
   catch(e){$("dlTRes").textContent="Erro: "+(e.message||e)}
 };
 
-function renderTudo(){renderPainel();renderLista();renderMapa();renderCad();if(ed)avisos()}
+/* aba Certificados */
+let fCert="pendente",certAlvo=null;
+const SIT_CERT={pendente:["Pendente – Certificado","cert_pendente"],recebido:["Recebido · a validar","em_andamento"],validado:["Recebido · validado","finalizado"]};
+function linhasCert(){
+  return fichas.filter(f=>f.tipo==="NF").flatMap(f=>A.itensValidos(f).map(it=>({f,it,idx:f.itens.indexOf(it),sit:A.certSituacao(f,it)}))).filter(x=>x.sit!=="nao_exige"&&(A.exigeCert(x.f,x.it)||A.temCert(x.it)))
+    .sort((a,b)=>({pendente:0,recebido:1,validado:2}[a.sit]-{pendente:0,recebido:1,validado:2}[b.sit])||b.f.numero-a.f.numero||a.idx-b.idx);
+}
+function abrirArquivo(a){
+  if(a.img){$("lbImg").src=a.img;$("lb").classList.remove("zoom");$("lb").hidden=false;return}
+  if(a.data){try{const b=atob(a.data.split(",")[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.open(URL.createObjectURL(new Blob([u],{type:"application/pdf"})),"_blank")}catch(e){toast("Não consegui abrir o PDF.",true)}return}
+  toast("Este PDF foi registrado só pelo nome (sem o arquivo).",true);
+}
+function renderCerts(){
+  const todas=linhasCert(),n={pendente:0,recebido:0,validado:0};todas.forEach(x=>n[x.sit]++);
+  $("tabCertN").hidden=!n.pendente;$("tabCertN").textContent=n.pendente;
+  if($("v-certs").hidden)return;
+  $("chipsCert").innerHTML=[["pendente","Pendentes"],["recebido","A validar"],["validado","Validados"],["todos","Todos"]].map(([k,l])=>`<button class="chip" type="button" data-k="${k}" aria-pressed="${k===fCert}">${l} · ${k==="todos"?todas.length:n[k]}</button>`).join("");
+  $("chipsCert").querySelectorAll(".chip").forEach(c=>c.onclick=()=>{fCert=c.dataset.k;renderCerts()});
+  const q=A.norm($("qCert").value||"");
+  const ls=todas.filter(x=>(fCert==="todos"||x.sit===fCert)&&(!q||A.norm([x.f.numero,x.f.nf,x.f.fornecedor,x.it.descricao,x.it.tag,x.it.codigo,x.it.certificado].join(" ")).includes(q)));
+  const vazio={pendente:"Nenhum certificado pendente. Tudo em dia.",recebido:"Nenhum certificado aguardando validação.",validado:"Nenhum certificado validado ainda.",todos:"Nenhum item que exija certificado."}[fCert];
+  $("tCert").innerHTML=`<thead><tr><th>Ficha</th><th>NF · Fornecedor</th><th>Item</th><th>Certificado</th><th>Situação</th><th style="text-align:right">Ações</th></tr></thead><tbody>${ls.length?ls.map(x=>{
+    const anx=(x.f.anexos?.cert||[]).map((a,k)=>({a,k})).filter(y=>y.a.item===x.idx);
+    const [rot,cls]=SIT_CERT[x.sit],key=x.f.id+"|"+x.idx;
+    const sem=x.it.certStatus==="nao_recebido"&&x.sit==="pendente";
+    return `<tr data-key="${esc(key)}">
+      <td><span class="n">${x.f.numero}</span><div class="s">${A.fmtData(x.f.dataRecebimento)}</div></td>
+      <td>NF ${esc(x.f.nf||"—")}<div class="s">${esc(x.f.fornecedor||"—")}</div></td>
+      <td class="it"><b>Item ${x.idx+1}</b> · ${esc(x.it.descricao)}<div class="s">${[x.it.tag,x.it.codigo,A.fmtQtd(x.it.qtd)+" "+(x.it.und||"")].filter(Boolean).map(esc).join(" · ")}</div></td>
+      <td>${x.sit==="pendente"?`<div class="cn"><input data-num placeholder="Nº (opcional)" aria-label="Número do certificado"></div>${sem?'<div class="s">Campo marcou “Sem certificado”</div>':""}`:`<b>${esc(x.it.certificado||"RECEBIDO")}</b>${anx.length?`<div class="s">${anx.length} arquivo(s)</div>`:""}`}</td>
+      <td><span class="pill ${cls}">${rot}</span></td>
+      <td><div class="acts">${x.sit==="pendente"?`<button class="btn small primary" type="button" data-anexar>Anexar arquivo</button><button class="btn small" type="button" data-reg title="Registrar só o número, sem arquivo">Só o nº</button>`:""}${anx.length?`<button class="btn small" type="button" data-ver="${anx[0].k}">Ver</button>`:""}${x.sit==="recebido"?`<button class="btn small" type="button" data-validar>Validar</button>`:""}<button class="btn small ghost" type="button" data-ficha>Ficha</button></div></td></tr>`}).join(""):`<tr><td colspan="6" class="hint" style="padding:22px 12px">${vazio}</td></tr>`}</tbody>`;
+  $("tCert").querySelectorAll("tbody tr[data-key]").forEach(tr=>{
+    const [id,ix]=tr.dataset.key.split("|"),f=fichas.find(z=>z.id===id),idx=+ix;
+    const num=()=>tr.querySelector("[data-num]")?.value.trim()||"";
+    tr.querySelector("[data-anexar]")?.addEventListener("click",()=>{certAlvo={id,idx,numero:num()};$("certFile").click()});
+    tr.querySelector("[data-reg]")?.addEventListener("click",async()=>{const n=num();if(!n){toast("Digite o número do certificado ou use Anexar arquivo.",true);tr.querySelector("[data-num]").focus();return}await salvarCert(f,idx,{numero:n,anexos:[]})});
+    tr.querySelector("[data-ver]")?.addEventListener("click",e=>abrirArquivo(f.anexos.cert[+e.currentTarget.dataset.ver]));
+    tr.querySelector("[data-validar]")?.addEventListener("click",async()=>{const g=JSON.parse(JSON.stringify(f));g.itens[idx].certValidado=true;try{await A.store.salvar(A.registrar(g,"cert_validado",{por:"Qualidade",itensTxt:String(idx+1)}));toast(`Certificado do item ${idx+1} (ficha ${f.numero}) validado`)}catch(e){toast(e.message,true)}});
+    tr.querySelector("[data-ficha]").addEventListener("click",()=>abrir(f));
+  });
+}
+async function salvarCert(f,idx,d){
+  try{const g=A.anexarCertificado(f,idx,d,"Qualidade");await A.store.salvar(g);
+    toast(`Certificado do item ${idx+1} anexado · ficha ${f.numero}${g.status!==f.status?" agora "+A.STATUS[g.status].rotulo:""}`)}catch(e){toast(e.message||"Não foi possível salvar.",true)}
+}
+function lerArquivos(files){return Promise.all([...files].map(file=>new Promise(res=>{
+  if(file.type==="application/pdf"){if(file.size>2.5e6){toast(`PDF ${file.name} muito grande (${(file.size/1e6).toFixed(1)} MB). Use até 2,5 MB.`,true);return res(null)}const fr=new FileReader();fr.onload=()=>res({nome:file.name,pdf:true,data:fr.result});fr.readAsDataURL(file);return}
+  const img=new Image(),url=URL.createObjectURL(file);img.onerror=()=>res(null);
+  img.onload=()=>{const s=Math.min(1,1400/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res({nome:file.name,img:c.toDataURL("image/jpeg",.7)})};img.src=url;
+}))).then(a=>a.filter(Boolean))}
+$("certFile").onchange=async e=>{const files=e.target.files;if(!certAlvo||!files.length)return;const alvo=certAlvo;certAlvo=null;
+  const anexos=await lerArquivos(files);e.target.value="";if(!anexos.length)return;
+  const f=fichas.find(z=>z.id===alvo.id);if(f)await salvarCert(f,alvo.idx,{numero:alvo.numero,anexos})};
+$("qCert").addEventListener("input",renderCerts);
+
+function renderTudo(){renderPainel();renderLista();renderCerts();renderMapa();renderCad();if(ed)avisos()}
 $("badgeDemo").hidden=A.store.modo!=="exemplo";
 A.cadastros.ouvir(c=>{cad=c;renderCad();if(ed)avisos()});
 A.store.ouvir(l=>{fichas=l;renderTudo()});

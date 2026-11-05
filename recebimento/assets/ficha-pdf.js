@@ -49,10 +49,7 @@
   function linhasDaFicha(A, f) {
     const its = A.itensValidos(f);
     return its.map((i, n) => {
-      let cert = i.certificado;
-      if (!cert && i.temCertAnexo) cert = "ANEXO";
-      if (!cert && i.certStatus === "nao_recebido") cert = "NÃO RECEBIDO";
-      if (!cert) cert = f.tipo === "ROM" ? "OBS 1" : (A.exigeCert(f, i) ? "PENDENTE" : "N/A");
+      const cert = A.textoCert(f, i);
       return [String(n + 1), i.descricao, i.tag || "", f.tipo === "ROM" ? "N/A" : (f.nf || ""), f.romaneio || "", cert, i.und || "",
         A.fmtQtd(i.qtd), A.fmtData(f.dataRecebimento), f.fornecimento || "", f.fornecedor || "", i.local || "", i.conf === "NA" ? "N/A" : (i.conf || "")];
     });
@@ -62,7 +59,7 @@
     if (f.observacao) partes.push(f.observacao);
     if (f.tipo === "NF") {
       const pend = A.itensValidos(f).map((i, n) => (A.exigeCert(f, i) && !A.temCert(i)) ? n + 1 : 0).filter(Boolean);
-      if (pend.length) partes.push(`Certificado de qualidade pendente: item(ns) ${pend.join(", ")}. Material crítico conforme CMC; cobrança enviada ao fornecedor.`);
+      if (pend.length) partes.push(`Pendente – Certificado: item(ns) ${pend.join(", ")} recebido(s) sem certificado de qualidade (material crítico conforme CMC). Cobrança enviada ao fornecedor.`);
       const nc = A.itensValidos(f).map((i, n) => i.conf === "NC" ? n + 1 : 0).filter(Boolean);
       if (nc.length) partes.push(`Item(ns) não conforme(s): ${nc.join(", ")}. Emitir RNC, segregar e identificar.`);
     }
@@ -113,7 +110,7 @@
         if (i === 0) texto(doc, String((nFolha - 1) * ITENS_POR_FOLHA + r + 1), x, y, LARG[i], hLin, { fs: 7, al: "c", pad: 0.4 });
         else if (lin) {
           const v = lin[i];
-          const destaque = (i === 5 && (v === "PENDENTE" || v === "NÃO RECEBIDO")) || (i === 12 && v === "NC");
+          const destaque = (i === 5 && /^PENDENTE/.test(v)) || (i === 12 && v === "NC");
           if (destaque) doc.setTextColor(178, 58, 46);
           texto(doc, v, x, y, LARG[i], hLin, { fs: i === 1 ? 6.8 : 6.3, fsMin: 4.2, al: c[2], pad: i === 1 ? 1.2 : 0.6, b: i === 0 || destaque });
           if (destaque) doc.setTextColor(0);
