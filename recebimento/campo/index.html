@@ -84,6 +84,19 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .scanner .sc-hint{padding:12px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:10px;font-size:.88rem;opacity:.95}
 .scanner .sc-hint input{background:#1c1c1c;color:#fff;border-color:#444}
 .scanner .sc-err{background:#5a1e18;color:#ffd9d4;border-radius:6px;padding:10px;font-size:.85rem}
+.dl{display:grid;gap:10px}
+.dl-st{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;border-radius:6px;padding:9px 11px;background:var(--surface-2);color:var(--muted)}
+.dl-st.ok{background:var(--ok-bg);color:var(--ok)} .dl-st.warn{background:var(--warn-bg);color:var(--warn)} .dl-st.bad{background:var(--bad-bg);color:var(--bad)}
+.dl-list{display:grid;gap:6px}
+.dl-it{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg);cursor:pointer}
+.dl-it input{width:20px;height:20px;min-height:0;margin-top:2px}
+.dl-it .d{font-weight:600;font-size:.88rem;overflow-wrap:anywhere}
+.dl-it .m{grid-column:2;font-size:.78rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.dl-it .m b{color:var(--ink);font-weight:600}
+.dl-opts{display:grid;gap:6px}
+.dl-opts button{text-align:left}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;flex:0 0 auto;animation:sp .8s linear infinite;margin-top:1px}
+@keyframes sp{to{transform:rotate(360deg)}}
 .back{background:none;border:0;color:var(--head-ink);font:600 .9rem var(--f-body);padding:8px 8px 8px 0;cursor:pointer}
 </style>
 </head>
@@ -157,6 +170,18 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
         <div class="notice bad dup" id="dupMsg" hidden></div>
       </div>
 
+      <div class="block" data-tipo="NF" id="dlBlock">
+        <h3><span class="n">✓</span>Diligenciamento</h3>
+        <div class="dl" id="dl">
+          <div class="dl-st">Escaneie ou digite a NF e o fornecedor para buscar os itens na planilha de Diligenciamento.</div>
+        </div>
+        <div class="shot-btns">
+          <button class="btn" type="button" id="btnDl">Buscar no Diligenciamento</button>
+          <label class="btn ghost" for="dlArquivo" id="lblDlArq" hidden>Carregar planilha (teste)</label>
+        </div>
+        <input id="dlArquivo" type="file" accept=".xlsx,.xls" hidden>
+      </div>
+
       <div class="block">
         <h3><span class="n">2</span>Itens recebidos</h3>
         <div class="grid2">
@@ -218,12 +243,15 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="../assets/vendor/html5-qrcode.min.js"></script>
+<script src="../assets/vendor/xlsx.mini.min.js"></script>
+<script src="../assets/vendor/msal-browser.min.js"></script>
+<script src="../assets/diligenciamento.js"></script>
 <script src="../assets/exemplo-docs.js"></script>
 <script src="../assets/dados.js"></script>
 <script>
 (function(){
 const A=window.AMR, $=id=>document.getElementById(id);
-let chaveNF=null, editando=null, fichas=[], tipo="NF", itens=[], fotosDoc=[], fotosCert=[], view="inicio";
+let dlRes=null, dlSel=new Set(), chaveNF=null, editando=null, fichas=[], tipo="NF", itens=[], fotosDoc=[], fotosCert=[], view="inicio";
 
 function toast(t,bad){const e=$("toast");e.textContent=t;e.className="toast"+(bad?" bad":"");e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -279,14 +307,14 @@ $("segTipo").querySelectorAll("button").forEach(b=>b.onclick=()=>setTipo(b.datas
 
 function novoItem(){return{descricao:"",tag:"",und:tipo==="ROM"?"PÇ":"UND",qtd:"",certificado:"",local:$("localPadrao").value.trim().toUpperCase(),conf:"C"}}
 function abrirNovo(t){
-  editando=null;setChave(null);$("segTipo").hidden=false;$("devolMsg").hidden=true;$("btnChegada").hidden=false;$("btnEnviar").textContent="Enviar recebimento";
+  editando=null;setChave(null);resetDilig();$("segTipo").hidden=false;$("devolMsg").hidden=true;$("btnChegada").hidden=false;$("btnEnviar").textContent="Enviar recebimento";
   itens=[novoItem()]; fotosDoc=[]; fotosCert=[];
   ["nf","fornecedor","romaneio","romaneioA","obs","localPadrao"].forEach(id=>$(id).value="");
   $("data").value=A.hoje();
   setTipo(t); itens=[novoItem()]; renderItens(); renderThumbs(); show("lancar");
 }
 function abrirEdicao(f){
-  editando=f;const c=A.conf(f);setChave(f.chaveNFe?A.lerChaveNFe(f.chaveNFe):null);
+  editando=f;const c=A.conf(f);resetDilig();setChave(f.chaveNFe?A.lerChaveNFe(f.chaveNFe):null);
   setTipo(f.tipo);$("segTipo").hidden=true;
   $("nf").value=f.nf||"";$("fornecedor").value=f.fornecedor||"";$("romaneio").value=f.tipo==="NF"?(f.romaneio||""):"";$("romaneioA").value=f.tipo==="ROM"?(f.romaneio||""):"";
   $("data").value=f.dataRecebimento||A.hoje();$("localPadrao").value="";
@@ -384,7 +412,7 @@ function aplicarLeituraNF(txt){
   if(fo)$("fornecedor").value=fo.nome;
   else if(!$("fornecedor").value){$("fornecedor").focus();toast("Fornecedor ainda não cadastrado. Digite o nome dele.")}
   const d=checarDup();
-  if(!d)toast("NF "+info.nf+(fo?" · "+fo.nome:"")+" preenchida pelo código");
+  if(!d){toast("NF "+info.nf+(fo?" · "+fo.nome:"")+" preenchida pelo código");buscarDilig(true)}
 }
 function aplicarLeituraRom(txt){
   const t=A.norm(txt),m=t.match(/\d{1,5}-FLT-\d{4}/);
@@ -394,6 +422,73 @@ function aplicarLeituraRom(txt){
 $("btnScanDoc").onclick=()=>tipo==="NF"
   ?abrirScanner("Código de barras da NF","Aponte para o código de barras do DANFE (no alto da nota), com o celular deitado se precisar.",aplicarLeituraNF)
   :abrirScanner("Código do romaneio","Aponte para o código de barras ou QR code do romaneio.",aplicarLeituraRom);
+
+/* ---------- Ponto 2: busca no Diligenciamento ---------- */
+const D=window.DILIG;
+function dlStatus(html,cls,spin){$("dl").innerHTML=`<div class="dl-st ${cls||""}">${spin?'<span class="spin"></span>':""}<span>${html}</span></div>`}
+function fonteTxt(f){if(!f)return"";const quando=f.modificado?new Date(f.modificado).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"";return `${f.tipo==="local"?"Cópia local":"SharePoint"} · ${esc(f.nome)}${quando?" · atualizada em "+quando:""}`}
+function fmtQ(n){return n===""||n==null?"—":Number(n).toLocaleString("pt-BR",{maximumFractionDigits:3})}
+function resetDilig(){dlRes=null;dlSel=new Set();if(!D){$("dlBlock").hidden=true;return}$("lblDlArq").hidden=D.configurado();dlStatus(D.configurado()?"Escaneie ou digite a NF e o fornecedor para buscar os itens na planilha de Diligenciamento.":"A consulta automática ao SharePoint aguarda a liberação da TI. Para testar agora, toque em <b>Carregar planilha (teste)</b> e escolha uma cópia do arquivo.")}
+async function buscarDilig(auto,cod){
+  if(!D)return;
+  const nf=$("nf").value.trim(),forn=$("fornecedor").value.trim();
+  if(!nf){if(!auto){toast("Informe o nº da NF.",true);$("nf").focus()}return}
+  if(!D.configurado()&&!D.fonteAtual()){if(!auto)toast("Carregue a planilha para testar (aguardando liberação da TI).",true);resetDilig();return}
+  dlStatus(D.configurado()?"Consultando a planilha no SharePoint…":"Buscando na planilha…","",true);
+  try{
+    const fo=A.cadastros.fornecedorPorNome(forn)||(chaveNF&&A.cadastros.fornecedorPorCnpj(chaveNF.cnpj));
+    const r=await D.buscar({nf,fornecedor:forn,codFornecedor:cod||fo?.codigoErp||""});
+    dlRes=r;mostrarDilig();
+  }catch(e){
+    if(e.code==="nao_configurado")resetDilig();
+    else dlStatus(`Não foi possível consultar a planilha${e.status===403||e.status===401?": seu usuário não tem acesso ao arquivo no SharePoint":""}. Você pode preencher os itens manualmente.`,"bad");
+  }
+}
+function mostrarDilig(){
+  const r=dlRes,ft=`<br><span style="opacity:.8">${fonteTxt(r.fonte)}</span>${r.fonte.aviso?`<br>${esc(r.fonte.aviso)}`:""}`;
+  if(r.situacao==="varios_fornecedores"||r.situacao==="pendentes_escolher"){
+    $("dl").innerHTML=`<div class="dl-st warn"><span>${r.situacao==="varios_fornecedores"?`A NF ${esc($("nf").value)} aparece para mais de um fornecedor. Qual é o desta nota?`:`A NF ainda não está no Diligenciamento. Escolha o fornecedor para ver os itens pendentes de entrega.`}${ft}</span></div>
+      <div class="dl-opts">${r.opcoes.map(o=>`<button class="btn" type="button" data-cf="${esc(o.codForn)}" data-nm="${esc(o.nomeForn)}">${esc(o.nomeForn)} <span class="code">(${o.qtdItens} ${o.qtdItens===1?"item":"itens"})</span></button>`).join("")}</div>`;
+    $("dl").querySelectorAll("[data-cf]").forEach(b=>b.onclick=async()=>{if(!$("fornecedor").value)$("fornecedor").value=b.dataset.nm;
+      const itens=r.situacao==="varios_fornecedores"?await D.itensNFFornecedor($("nf").value,b.dataset.cf):await D.pendentesDoFornecedor(b.dataset.cf);
+      dlRes={...r,situacao:r.situacao==="varios_fornecedores"?"encontrada":"pendentes_fornecedor",fornecedor:{codForn:b.dataset.cf,nomeForn:b.dataset.nm},itens};lembrarCodigo(b.dataset.cf);mostrarDilig()});
+    return;
+  }
+  if(!r.itens.length){dlStatus(`NF ${esc($("nf").value)} não encontrada no Diligenciamento${$("fornecedor").value?" e sem itens pendentes para "+esc($("fornecedor").value):""}. Preencha os itens manualmente e avise Suprimentos.${ft}`,"bad");return}
+  const enc=r.situacao==="encontrada";
+  if(r.fornecedor)lembrarCodigo(r.fornecedor.codForn);
+  dlSel=new Set(r.itens.map((_,i)=>i).filter(i=>enc||false));
+  $("dl").innerHTML=`<div class="dl-st ${enc?"ok":"warn"}"><span>${enc?`<b>${r.itens.length} ${r.itens.length===1?"item encontrado":"itens encontrados"}</b> para a NF ${esc($("nf").value)} · ${esc(r.fornecedor.nomeForn)}`:`<b>NF ainda não lançada no Diligenciamento</b> (sem pré-nota). Marque os itens que chegaram, entre os ${r.itens.length} pendentes de ${esc(r.fornecedor.nomeForn)}.`}${ft}</span></div>
+    <div class="dl-list">${r.itens.map((it,i)=>`<label class="dl-it"><input type="checkbox" data-dl="${i}" ${dlSel.has(i)?"checked":""}><span class="d">${esc(it.descricao)}${it.descComp?" — "+esc(it.descComp):""}</span>
+      <span class="m"><span><b>${esc(it.codigo)}</b></span><span>PC ${esc(it.pc)}/${esc(it.itemPc)}</span><span>${enc?"Recebido":"Pedido"}: <b>${fmtQ(enc?(it.qtdReceb||it.qtd):it.qtd)} ${esc(it.un)}</b></span>${!enc&&it.qtdPend?`<span>Pendente: <b>${fmtQ(it.qtdPend)} ${esc(it.un)}</b></span>`:""}<span>${esc(it.status)}</span>${it.pedeCertificado?'<span style="color:var(--warn);font-weight:600">Exige certificado</span>':""}</span></label>`).join("")}</div>
+    <button class="btn primary" type="button" id="btnUsarDl">Preencher itens selecionados</button>`;
+  $("dl").querySelectorAll("[data-dl]").forEach(c=>c.onchange=()=>{const i=+c.dataset.dl;c.checked?dlSel.add(i):dlSel.delete(i)});
+  $("btnUsarDl").onclick=usarDilig;
+}
+function lembrarCodigo(cod){
+  const nome=$("fornecedor").value.trim();if(!cod||!nome)return;
+  const fo=A.cadastros.fornecedorPorNome(nome)||(chaveNF&&A.cadastros.fornecedorPorCnpj(chaveNF.cnpj));
+  if(fo&&fo.codigoErp===cod)return;
+  A.cadastros.salvarFornecedor({...(fo||{}),id:fo?.id,nome:fo?.nome||nome,cnpj:fo?.cnpj||chaveNF?.cnpj||"",emails:fo?.emails||[],codigoErp:cod}).catch(()=>{});
+}
+function usarDilig(){
+  const sel=[...dlSel].sort((a,b)=>a-b).map(i=>dlRes.itens[i]);
+  if(!sel.length){toast("Marque pelo menos um item.",true);return}
+  const enc=dlRes.situacao==="encontrada",local=$("localPadrao").value.trim().toUpperCase();
+  const novos=sel.map(it=>({descricao:A.norm(it.descricao+(it.descComp?" - "+it.descComp:"")),tag:it.codigo,und:A.norm(it.un),qtd:enc?(it.qtdReceb||it.qtd):"",certificado:"",local,conf:"C",
+    pc:it.pc,itemPc:it.itemPc,exigeCertificado:!!it.pedeCertificado,origem:"diligenciamento",qtdPedido:it.qtd}));
+  const vazios=itens.every(x=>!x.descricao&&!x.tag);
+  itens=vazios?novos:[...itens,...novos];
+  if(dlRes.itens[0]&&!$("romaneio").value)$("romaneio").value=String(+dlRes.itens[0].pc)+"-REV-00";
+  if(!$("fornecedor").value&&dlRes.fornecedor)$("fornecedor").value=dlRes.fornecedor.nomeForn;
+  renderItens();checarDup();
+  toast(`${novos.length} ${novos.length===1?"item preenchido":"itens preenchidos"} pelo Diligenciamento${enc?"":". Informe a quantidade recebida."}`);
+  $("itens").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("btnDl").onclick=()=>buscarDilig(false);
+$("dlArquivo").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;dlStatus("Lendo a planilha "+esc(f.name)+"… pode levar alguns segundos.","",true);
+  try{const x=await D.carregarArquivoLocal(f);toast(`Planilha carregada: ${x.registros.length.toLocaleString("pt-BR")} linhas`);if($("nf").value)buscarDilig(true);else dlStatus("Planilha carregada ("+fonteTxt(D.fonteAtual())+"). Agora escaneie ou digite a NF.","ok")}
+  catch(err){dlStatus("Não consegui ler a planilha: "+esc(err.message),"bad")}};
 
 /* duplicidade */
 function montar(){

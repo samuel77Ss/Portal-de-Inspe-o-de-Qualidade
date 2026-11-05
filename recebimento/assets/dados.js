@@ -181,7 +181,7 @@
   }
 
   /* ---------- Cadastros: fornecedores e grupos de e-mail ---------- */
-  const KEY_CAD = "amr_recebimento_cadastros_v1";
+  const KEY_CAD = "amr_recebimento_cadastros_v2";
   const GRUPOS = { suprimentos: "Suprimentos", logistica: "Logística", qualidade: "Qualidade" };
   const ouvCad = new Set();
   let cad = null;
@@ -189,7 +189,7 @@
     if (cad) return cad;
     try { const s = localStorage.getItem(KEY_CAD); cad = s ? JSON.parse(s) : null; } catch (e) { cad = null; }
     if (!cad) {
-      cad = { fornecedores: [{ id: "weg", nome: "WEG TINTAS", cnpj: "60.621.141/0007-49", emails: [], exemplo: true }],
+      cad = { fornecedores: [{ id: "weg", nome: "WEG TINTAS", cnpj: "60.621.141/0007-49", codigoErp: "222796", emails: [], exemplo: true }],
               grupos: { suprimentos: [], logistica: [], qualidade: [] }, fichaInicial: FICHA_INICIAL };
       gravarCad();
     }

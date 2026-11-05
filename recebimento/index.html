@@ -179,7 +179,8 @@ table.its tr.flag td:first-child{box-shadow:inset 4px 0 0 var(--bad);color:var(-
         <div id="fornForm" class="box" hidden style="background:var(--bg)">
           <div class="g4">
             <div class="f" style="grid-column:span 2"><label for="foNome">Nome</label><input id="foNome" autocomplete="off"></div>
-            <div class="f" style="grid-column:span 2"><label for="foCnpj">CNPJ</label><input id="foCnpj" inputmode="numeric" autocomplete="off"></div>
+            <div class="f"><label for="foCnpj">CNPJ</label><input id="foCnpj" inputmode="numeric" autocomplete="off"></div>
+            <div class="f"><label for="foCod">Código (Diligenciamento)</label><input id="foCod" inputmode="numeric" autocomplete="off"></div>
             <div class="f" style="grid-column:1/-1"><label for="foEmails">E-mails para aviso (um por linha)</label><textarea id="foEmails" rows="3"></textarea></div>
           </div>
           <div class="actions"><button class="btn danger small" type="button" id="btnExcForn" hidden>Excluir</button><span class="sp"></span><button class="btn ghost small" type="button" id="btnCancForn">Cancelar</button><button class="btn primary small" type="button" id="btnSalvForn">Salvar fornecedor</button></div>
@@ -466,13 +467,13 @@ function renderCad(){
   $("btnGrupos").onclick=async()=>{try{for(const k of Object.keys(A.GRUPOS))await A.cadastros.salvarGrupo(k,$("g_"+k).value.split(/[\n,;]+/));toast("Grupos salvos")}catch(e){toast(e.message,true)}};
   const q=A.norm($("qForn").value);
   const l=cad.fornecedores.filter(f=>!q||A.norm(f.nome+" "+f.cnpj).includes(q)).sort((a,b)=>a.nome.localeCompare(b.nome));
-  $("fornList").innerHTML=l.length?l.map(f=>`<div class="forn"><div class="top"><b>${esc(f.nome)}</b>${f.cnpj?`<span class="code">${esc(f.cnpj)}</span>`:""}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}<span class="grow"></span><button class="btn ghost small" type="button" data-fo="${f.id}">Editar</button></div><div class="em">${f.emails.length?esc(f.emails.join(" · ")):'<span style="color:var(--warn)">Sem e-mail cadastrado</span>'}</div></div>`).join(""):`<div class="empty" style="padding:16px">Nenhum fornecedor${q?" encontrado":" cadastrado"}.</div>`;
+  $("fornList").innerHTML=l.length?l.map(f=>`<div class="forn"><div class="top"><b>${esc(f.nome)}</b>${f.cnpj?`<span class="code">${esc(f.cnpj)}</span>`:""}${f.codigoErp?`<span class="code">cód. ${esc(f.codigoErp)}</span>`:""}${f.exemplo?'<span class="pill warn">Exemplo</span>':""}<span class="grow"></span><button class="btn ghost small" type="button" data-fo="${f.id}">Editar</button></div><div class="em">${f.emails.length?esc(f.emails.join(" · ")):'<span style="color:var(--warn)">Sem e-mail cadastrado</span>'}</div></div>`).join(""):`<div class="empty" style="padding:16px">Nenhum fornecedor${q?" encontrado":" cadastrado"}.</div>`;
   $("fornList").querySelectorAll("[data-fo]").forEach(b=>b.onclick=()=>editForn(cad.fornecedores.find(f=>f.id===b.dataset.fo)));
 }
-function editForn(f){foEd=f||null;$("fornForm").hidden=false;$("foNome").value=f?.nome||"";$("foCnpj").value=f?.cnpj||"";$("foEmails").value=(f?.emails||[]).join("\n");$("btnExcForn").hidden=!f;$("btnExcForn").dataset.armed="";$("btnExcForn").textContent="Excluir";$("foNome").focus()}
+function editForn(f){foEd=f||null;$("fornForm").hidden=false;$("foNome").value=f?.nome||"";$("foCnpj").value=f?.cnpj||"";$("foCod").value=f?.codigoErp||"";$("foEmails").value=(f?.emails||[]).join("\n");$("btnExcForn").hidden=!f;$("btnExcForn").dataset.armed="";$("btnExcForn").textContent="Excluir";$("foNome").focus()}
 $("btnNovoForn").onclick=()=>editForn(null);
 $("btnCancForn").onclick=()=>{$("fornForm").hidden=true};
-$("btnSalvForn").onclick=async()=>{try{await A.cadastros.salvarFornecedor({id:foEd?.id,nome:$("foNome").value,cnpj:$("foCnpj").value.trim(),emails:$("foEmails").value.split(/[\n,;]+/)});$("fornForm").hidden=true;toast("Fornecedor salvo")}catch(e){toast(e.message,true)}};
+$("btnSalvForn").onclick=async()=>{try{await A.cadastros.salvarFornecedor({id:foEd?.id,nome:$("foNome").value,cnpj:$("foCnpj").value.trim(),codigoErp:$("foCod").value.trim(),emails:$("foEmails").value.split(/[\n,;]+/)});$("fornForm").hidden=true;toast("Fornecedor salvo")}catch(e){toast(e.message,true)}};
 $("btnExcForn").onclick=async()=>{const b=$("btnExcForn");if(!b.dataset.armed){b.dataset.armed="1";b.textContent="Toque de novo";return}await A.cadastros.excluirFornecedor(foEd.id);$("fornForm").hidden=true;toast("Fornecedor excluído")};
 $("qForn").oninput=renderCad;
 $("btnFichaIni").onclick=async()=>{await A.cadastros.salvarFichaInicial($("fichaIni").value);toast("Numeração salva")};
