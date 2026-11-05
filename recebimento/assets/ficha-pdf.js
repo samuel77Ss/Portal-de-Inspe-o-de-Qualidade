@@ -145,7 +145,7 @@
     });
     /* Rodapé discreto: rastreabilidade */
     doc.setFont("helvetica", "normal"); doc.setFontSize(5.5); doc.setTextColor(120);
-    doc.text(`Gerado pelo app Recebimento AMR em ${new Date().toLocaleString("pt-BR")}${f.chaveNFe ? " · Chave NF-e " + f.chaveNFe : ""}`, M, H - 2.5);
+    doc.text(`Gerado pelo RECEBE+ em ${new Date().toLocaleString("pt-BR")}${f.chaveNFe ? " · Chave NF-e " + f.chaveNFe : ""}`, M, H - 2.5);
     doc.setTextColor(0);
   }
 
@@ -158,7 +158,7 @@
       if (p) doc.addPage("a4", "landscape");
       folha(doc, A, f, linhas.slice(p * ITENS_POR_FOLHA, (p + 1) * ITENS_POR_FOLHA), p + 1, tot, cfg || {});
     }
-    doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "Recebimento AMR" });
+    doc.setProperties({ title: `Ficha ${f.numero} - ${A.DOC_FICHA}`, subject: "Ficha de Inspeção e Recebimento de Materiais", creator: "RECEBE+" });
     return doc;
   }
   function nomeArquivo(A, f) {

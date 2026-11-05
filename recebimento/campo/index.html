@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#1f2d35">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Recebimento">
-<title>Recebimento AMR Campo</title>
+<meta name="apple-mobile-web-app-title" content="RECEBE+">
+<title>RECEBE+ Campo</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="../assets/base.css">
 <style>
@@ -104,6 +104,11 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
 .dl-opts button{text-align:left}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;flex:0 0 auto;animation:sp .8s linear infinite;margin-top:1px}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+.marca{display:flex;align-items:center;gap:10px;min-width:0}
+.marca img{width:34px;height:34px;border-radius:7px;flex:0 0 auto}
+.wm{font-family:var(--f-display);font-weight:800;letter-spacing:.01em;line-height:1}
+.wm .plus{color:#e58a3c;margin-left:1px}
 .back{background:none;border:0;color:var(--head-ink);font:600 .9rem var(--f-body);padding:8px 8px 8px 0;cursor:pointer}
 </style>
 </head>
@@ -112,7 +117,8 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
   <div class="wrap">
     <div class="hbar">
       <button class="back" id="btnVoltar" type="button" hidden aria-label="Voltar">← Voltar</button>
-      <div class="grow"><h1 id="hTitulo">Recebimento</h1><small id="hSub">AMR · FLOTAÇÃO RECLEANER · CAMPO</small></div>
+      <img src="../assets/marca-icone.png" alt="" id="hIcone" style="width:34px;height:34px;border-radius:7px;flex:0 0 auto">
+      <div class="grow"><h1 id="hTitulo" class="wm">RECEBE<span class="plus">+</span></h1><small id="hSub">RECEBIMENTO DE MATERIAIS · AMR · CAMPO</small></div>
       <span class="badge-demo" id="badgeDemo" title="Dados de exemplo, ainda sem servidor">Modo exemplo</span>
     </div>
   </div>
@@ -136,7 +142,7 @@ main{padding-block:16px calc(110px + env(safe-area-inset-bottom,0px))}
       <button class="btn ghost small" id="btnIosOk" type="button" aria-label="Fechar aviso">OK</button>
     </div>
     <div class="install" id="installBox" hidden>
-      <div class="grow">Instale o app no celular para abrir direto da tela inicial.</div>
+      <div class="grow">Instale o <b>RECEBE+</b> no celular para abrir direto da tela inicial.</div>
       <button class="btn primary small" id="btnInstalar" type="button">Instalar</button>
     </div>
     <div id="devolBox" hidden>
@@ -267,9 +273,9 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function show(v){
   view=v;["inicio","lancar","ok"].forEach(x=>$("v-"+x).hidden=x!==v);
   $("bar").hidden=v!=="lancar"; $("btnVoltar").hidden=v==="inicio";
-  $("hTitulo").textContent=v==="lancar"?"Novo recebimento":"Recebimento";
-  $("hSub").textContent=v==="lancar"?(editando?"FICHA Nº "+editando.numero+" · CORREÇÃO":"PRÓXIMA FICHA Nº "+A.proximoNumero(fichas,A.cadastros.fichaInicial())):"AMR · FLOTAÇÃO RECLEANER · CAMPO";
-  $("hTitulo").textContent=v==="lancar"?(editando?"Corrigir recebimento":"Novo recebimento"):"Recebimento";
+  $("hSub").textContent=v==="lancar"?(editando?"FICHA Nº "+editando.numero+" · CORREÇÃO":"PRÓXIMA FICHA Nº "+A.proximoNumero(fichas,A.cadastros.fichaInicial())):"RECEBIMENTO DE MATERIAIS · AMR · CAMPO";
+  if(v==="lancar"){$("hTitulo").textContent=editando?"Corrigir recebimento":"Novo recebimento";$("hTitulo").classList.remove("wm")}else{$("hTitulo").innerHTML='RECEBE<span class="plus">+</span>';$("hTitulo").classList.add("wm")}
+  $("hIcone").hidden=v==="lancar";
   window.scrollTo(0,0);
 }
 $("btnVoltar").onclick=()=>show("inicio");

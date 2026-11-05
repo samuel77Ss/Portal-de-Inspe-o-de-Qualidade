@@ -153,7 +153,7 @@
     const para = destinatariosCertPendente(f);
     const assunto = `Certificado de qualidade pendente - NF ${f.nf} - ${f.fornecedor} - Ficha ${f.numero}`;
     const linhas = lista.map(({ i, n }) => `- Item ${n + 1}: ${i.tag || "(sem código)"} - ${i.descricao}\n  Quantidade: ${fmtQtd(i.qtd)} ${i.und}${i.pc ? `  |  Pedido ${i.pc}/${i.itemPc}` : ""}\n  Pendência: certificado de qualidade não enviado`);
-    const corpo = `Prezados,\n\nNo recebimento de materiais do Projeto Flotação Recleaner (contrato ${CONTRATO}), os itens abaixo chegaram sem o certificado de qualidade.\n\nNota fiscal: ${f.nf}${f.serie ? " (série " + f.serie + ")" : ""}\nFornecedor: ${f.fornecedor}\nData do recebimento: ${fmtData(f.dataRecebimento)}\nFicha de recebimento: ${f.numero}\n\nItens pendentes:\n${linhas.join("\n")}\n\nSolicitamos o envio dos certificados de qualidade pendentes, identificando o número da NF e o item a que cada um se refere.\n\nAtenciosamente,\nQualidade - Milplan Engenharia\nProjeto AMR / Flotação Recleaner`;
+    const corpo = `Prezados,\n\nNo recebimento de materiais do Projeto Flotação Recleaner (contrato ${CONTRATO}), os itens abaixo chegaram sem o certificado de qualidade.\n\nNota fiscal: ${f.nf}${f.serie ? " (série " + f.serie + ")" : ""}\nFornecedor: ${f.fornecedor}\nData do recebimento: ${fmtData(f.dataRecebimento)}\nFicha de recebimento: ${f.numero}\n\nItens pendentes:\n${linhas.join("\n")}\n\nSolicitamos o envio dos certificados de qualidade pendentes, identificando o número da NF e o item a que cada um se refere.\n\nAtenciosamente,\nQualidade - Milplan Engenharia\nProjeto AMR / Flotação Recleaner\n(mensagem gerada pelo RECEBE+)`;
     return { para, assunto, corpo, itens: lista.map(x => x.k) };
   }
   function registrarCobranca(f, email, por) {
