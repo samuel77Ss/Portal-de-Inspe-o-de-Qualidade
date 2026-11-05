@@ -10,7 +10,8 @@
     host: "milplanengenharia.sharepoint.com",
     site: "/sites/ObraM.447",
     biblioteca: "Suprimentos",
-    pasta: "01_Base Diligenciamento",
+    /* Pasta atual da planilha (link enviado em 05/11/2026). A antiga fica como reserva. */
+    pastas: ["RELATORIO DILIGENCIAMENTO", "01_Base Diligenciamento"],
     arquivo: "relatorio_diligenciamento_093945.xlsx",
     escopos: ["User.Read", "Files.Read.All", "Sites.Read.All"]
   };
@@ -113,17 +114,24 @@
     const drive = drives.find(d => norm(d.name) === norm(CFG.biblioteca) || decodeURIComponent(d.webUrl || "").endsWith("/" + CFG.biblioteca)) || drives[0];
     const enc = s => s.split("/").map(encodeURIComponent).join("/");
     let aviso = "";
-    try {
-      const it = await (await graph(`/drives/${drive.id}/root:/${enc(CFG.pasta + "/" + CFG.arquivo)}?$select=id,name`)).json();
-      alvo = { driveId: drive.id, itemId: it.id };
-    } catch (e) {
-      if (e.status !== 404) throw e;
-      const lista = (await (await graph(`/drives/${drive.id}/root:/${enc(CFG.pasta)}:/children?$select=id,name,lastModifiedDateTime,file&$top=200`)).json()).value
-        .filter(x => x.file && /\.xlsx?$/i.test(x.name)).sort((a, b) => b.lastModifiedDateTime.localeCompare(a.lastModifiedDateTime));
-      if (!lista.length) throw new Error("Planilha não encontrada na pasta " + CFG.pasta + ".");
-      alvo = { driveId: drive.id, itemId: lista[0].id };
-      aviso = `O arquivo ${CFG.arquivo} não foi encontrado; usando o mais recente da pasta: ${lista[0].name}.`;
+    /* 1) arquivo com o nome conhecido, em cada pasta */
+    for (const pasta of CFG.pastas) {
+      try {
+        const it = await (await graph(`/drives/${drive.id}/root:/${enc(pasta + "/" + CFG.arquivo)}?$select=id,name`)).json();
+        alvo = { driveId: drive.id, itemId: it.id };
+        if (pasta !== CFG.pastas[0]) aviso = `Planilha encontrada na pasta antiga (${pasta}).`;
+        return aviso;
+      } catch (e) { if (e.status !== 404) throw e; }
     }
+    /* 2) o .xlsx mais recente da pasta principal (se o nome do arquivo mudar) */
+    for (const pasta of CFG.pastas) {
+      let lista = [];
+      try { lista = (await (await graph(`/drives/${drive.id}/root:/${enc(pasta)}:/children?$select=id,name,lastModifiedDateTime,file&$top=200`)).json()).value; }
+      catch (e) { if (e.status !== 404) throw e; continue; }
+      lista = lista.filter(x => x.file && /\.xlsx?$/i.test(x.name) && !/^~\$/.test(x.name)).sort((a, b) => b.lastModifiedDateTime.localeCompare(a.lastModifiedDateTime));
+      if (lista.length) { alvo = { driveId: drive.id, itemId: lista[0].id }; aviso = `Usando a planilha mais recente da pasta ${pasta}: ${lista[0].name}.`; return aviso; }
+    }
+    throw new Error("Planilha de Diligenciamento não encontrada na pasta " + CFG.pastas[0] + ".");
     return aviso;
   }
   /* Sempre confere a versão atual; só baixa de novo se o arquivo mudou */
