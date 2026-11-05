@@ -187,6 +187,13 @@ td.ck input{width:18px;height:18px;min-height:0}
           <div style="display:flex;gap:8px"><input id="fichaIni" type="number" min="1" inputmode="numeric" style="max-width:160px"><button class="btn" type="button" id="btnFichaIni">Salvar</button></div>
           <span class="code" id="proxFicha"></span>
         </div>
+        <div class="box">
+          <h4>Ficha FP-01 (PDF)</h4>
+          <p class="hint">Dados do cabeçalho do modelo 447.OPE.FP-01 Rev.02.</p>
+          <div class="f"><label for="cfgResp">Responsável por este documento</label><input id="cfgResp" autocomplete="off"></div>
+          <div class="f"><label for="cfgProj">Projeto Nº Cliente</label><input id="cfgProj" autocomplete="off" placeholder="(em branco no modelo atual)"></div>
+          <div><button class="btn small" type="button" id="btnCfgDoc">Salvar</button></div>
+        </div>
         <div class="box" id="dlCfg">
           <h4>Planilha de Diligenciamento</h4>
           <p class="hint">Conecte a pasta <b>RELATORIO DILIGENCIAMENTO</b> sincronizada pelo OneDrive neste computador. O app confere a cada 3 minutos se chegou uma planilha nova e passa a usar a mais recente.</p>
@@ -305,7 +312,8 @@ td.ck input{width:18px;height:18px;min-height:0}
         <ul class="hist" id="dHist"></ul>
       </div>
       <div class="soon">
-        <button class="btn" type="button" disabled>Ficha FP-01 (PDF)</button>
+        <button class="btn primary" type="button" id="btnPdfVer">Ver Ficha FP-01 (PDF)</button>
+        <button class="btn" type="button" id="btnPdfBaixar">Baixar PDF</button>
         <button class="btn" type="button" disabled>Baixar pacote</button>
         
       </div>
@@ -323,6 +331,9 @@ td.ck input{width:18px;height:18px;min-height:0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="assets/vendor/xlsx.mini.min.js"></script>
+<script src="assets/vendor/jspdf.umd.min.js"></script>
+<script src="assets/logos.js"></script>
+<script src="assets/ficha-pdf.js"></script>
 <script src="assets/exemplo-docs.js"></script>
 <script src="assets/dados.js"></script>
 <script src="assets/atualizacao.js"></script>
@@ -567,10 +578,23 @@ $("devOk").onclick=async()=>{
   try{await A.store.salvar(f);toast("Ficha "+f.numero+" devolvida ao campo como inconforme");fechar()}catch(e){toast(e.message,true)}
 };
 
+/* ficha FP-01 em PDF */
+function gerarPdf(){
+  const f=coletar();
+  if(!A.itensValidos(f).length){toast("A ficha não tem itens para imprimir.",true);return null}
+  try{return {doc:window.FICHA_PDF.gerar(A,f,A.cadastros.documento()),nome:window.FICHA_PDF.nomeArquivo(A,f)}}
+  catch(e){toast(e.message||"Não foi possível gerar o PDF.",true);return null}
+}
+$("btnPdfVer").onclick=()=>{const g=gerarPdf();if(!g)return;const url=g.doc.output("bloburl");const w=window.open(url,"_blank");if(!w){g.doc.save(g.nome);toast("O navegador bloqueou a nova aba; o PDF foi baixado.")}};
+$("btnPdfBaixar").onclick=()=>{const g=gerarPdf();if(!g)return;g.doc.save(g.nome);toast("PDF baixado: "+g.nome)};
+$("btnCfgDoc").onclick=async()=>{await A.cadastros.salvarDocumento({responsavel:$("cfgResp").value,projetoCliente:$("cfgProj").value});toast("Dados da ficha salvos")};
+
 /* cadastros */
 let foEd=null;
 function renderCad(){
   if(!cad)return;
+  if(document.activeElement!==$("cfgResp"))$("cfgResp").value=cad.responsavel||"";
+  if(document.activeElement!==$("cfgProj"))$("cfgProj").value=cad.projetoCliente||"";
   $("cmcLista").innerHTML=A.CMC.map(g=>`<div style="display:grid;gap:2px;border-top:1px solid var(--line);padding-top:8px"><strong style="font-size:.9rem">${esc(g.rotulo)} <span class="code">${esc(g.doc)}</span></strong><span class="hint">${esc(g.tipo)} · Setor ${esc(g.setor)} · CQ ${esc(g.cq)} · Cliente ${esc(g.cliente)}</span>${g.evidencia?`<span class="hint">Evidência: ${esc(g.evidencia)}</span>`:""}</div>`).join("")+'<p class="hint" style="margin-top:6px">C inspeção de produto · R verificação da documentação · V exame visual · M amostragem · W testemunho opcional</p>';
   $("fichaIni").value=cad.fichaInicial;
   $("proxFicha").textContent="Próxima ficha: Nº "+A.proximoNumero(fichas,cad.fichaInicial);

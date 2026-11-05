@@ -277,9 +277,11 @@
     try { const s = localStorage.getItem(KEY_CAD); cad = s ? JSON.parse(s) : null; } catch (e) { cad = null; }
     if (!cad) {
       cad = { fornecedores: [{ id: "weg", nome: "WEG TINTAS", cnpj: "60.621.141/0007-49", codigoErp: "222796", emails: [], exemplo: true }],
-              grupos: { suprimentos: [], logistica: [], qualidade: [], planejamento: [] }, fichaInicial: FICHA_INICIAL };
+              grupos: { suprimentos: [], logistica: [], qualidade: [], planejamento: [] }, fichaInicial: FICHA_INICIAL, responsavel: "MARCOS SILVA", projetoCliente: "" };
       gravarCad();
     }
+    if (cad.responsavel === undefined) cad.responsavel = "MARCOS SILVA";
+    if (cad.projetoCliente === undefined) cad.projetoCliente = "";
     cad.grupos = cad.grupos || {}; Object.keys(GRUPOS).forEach(k => { cad.grupos[k] = cad.grupos[k] || []; });
     return cad;
   }
@@ -307,6 +309,8 @@
     },
     async salvarFichaInicial(n) { const c = lerCad(); c.fichaInicial = Math.max(1, parseInt(n, 10) || FICHA_INICIAL); gravarCad(); avisarCad(); },
     fichaInicial() { return lerCad().fichaInicial || FICHA_INICIAL; },
+    async salvarDocumento(d) { const c = lerCad(); c.responsavel = norm(d.responsavel); c.projetoCliente = String(d.projetoCliente || "").trim(); gravarCad(); avisarCad(); },
+    documento() { const c = lerCad(); return { responsavel: c.responsavel, projetoCliente: c.projetoCliente }; },
     fornecedorPorCnpj(cnpj) { const c = soCnpj(cnpj); return c ? lerCad().fornecedores.find(f => soCnpj(f.cnpj) === c) || null : null; },
     fornecedorPorNome(nome) { const n = normForn(nome); return lerCad().fornecedores.find(f => normForn(f.nome) === n) || null; }
   };
