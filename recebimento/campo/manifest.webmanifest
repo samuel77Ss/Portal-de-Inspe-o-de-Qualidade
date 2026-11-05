@@ -1,7 +1,7 @@
 {
-  "name": "RECEBE+ Campo",
-  "short_name": "RECEBE+",
-  "description": "RECEBE+ · Recebimento de materiais (NF e romaneio Anglo) do projeto AMR / Flotação Recleaner",
+  "name": "RECEB+ Campo",
+  "short_name": "RECEB+",
+  "description": "RECEB+ · Recebimento de materiais (NF e romaneio Anglo) do projeto AMR / Flotação Recleaner",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
