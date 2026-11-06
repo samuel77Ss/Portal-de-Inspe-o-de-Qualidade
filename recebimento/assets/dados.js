@@ -363,11 +363,12 @@
     cad.grupos = cad.grupos || {}; Object.keys(GRUPOS).forEach(k => { cad.grupos[k] = cad.grupos[k] || []; });
     return cad;
   }
-  function gravarCad() { try { localStorage.setItem(KEY_CAD, JSON.stringify(cad)); } catch (e) { } }
+  function gravarCad(semNuvem) { try { localStorage.setItem(KEY_CAD, JSON.stringify(cad)); } catch (e) { } if (!semNuvem && window.NXNUVEM) window.NXNUVEM.salvarCad(cad); }
   function avisarCad() { const c = JSON.parse(JSON.stringify(lerCad())); ouvCad.forEach(fn => { try { fn(c); } catch (e) { } }); }
   window.addEventListener("storage", e => { if (e.key === KEY_CAD) { cad = null; avisarCad(); } });
   const emailOk = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
   const cadastros = {
+    _substituir(c) { if (!c || JSON.stringify(c) === JSON.stringify(cad)) return; cad = c; lerCad(); gravarCad(true); avisarCad(); },
     ouvir(fn) { ouvCad.add(fn); fn(JSON.parse(JSON.stringify(lerCad()))); return () => ouvCad.delete(fn); },
     async salvarFornecedor(f) {
       const c = lerCad(); f.nome = norm(f.nome);

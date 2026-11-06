@@ -35,7 +35,7 @@
     const attrs = o.attrs || `data-id="${esc(f.id)}"`;
     return `<button class="fc" type="button" ${attrs}>
       <div class="fc-l">
-        <div class="fc-num"><span><span class="lbl-n">FICHA </span>${f.numero}</span><span class="pill ${f.tipo}">${f.tipo === "ROM" ? "ROMANEIO" : "NF"}</span>${f.exemplo ? '<span class="ex">exemplo</span>' : ""}</div>
+        <div class="fc-num"><span><span class="lbl-n">FICHA </span>${f.numero ?? "—"}</span><span class="pill ${f.tipo}">${f.tipo === "ROM" ? "ROMANEIO" : "NF"}</span>${f.exemplo ? '<span class="ex">exemplo</span>' : ""}</div>
         <div class="fc-doc" title="${esc(titulo)}">${esc(titulo)}</div>
         <div class="fc-meta"><span>${icon("doc")}${esc(docTxt)}</span><span>${icon("cal")}${A.fmtData(f.dataRecebimento)}</span><span>${icon("box")}${its} ${its === 1 ? "item" : "itens"}</span></div>
         ${alertas.length ? `<div class="fc-alert">${alertas.join("")}</div>` : ""}

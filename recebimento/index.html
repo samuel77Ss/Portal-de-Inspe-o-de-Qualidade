@@ -500,12 +500,18 @@ table.ft .al span{display:inline-flex;gap:4px;align-items:center}
 <div class="lightbox" id="lb" hidden><button class="btn onhead small close" type="button" id="lbClose">Fechar</button><img id="lbImg" alt="Documento ampliado"></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script>window.NEXUM_APP="escritorio"</script>
 <script src="assets/vendor/xlsx.mini.min.js"></script>
 <script src="assets/vendor/jspdf.umd.min.js"></script>
 <script src="assets/logos.js"></script>
 <script src="assets/ficha-pdf.js"></script>
 <script src="assets/exemplo-docs.js"></script>
 <script src="assets/dados.js"></script>
+<script src="assets/vendor/firebase-app-compat.js"></script>
+<script src="assets/vendor/firebase-auth-compat.js"></script>
+<script src="assets/vendor/firebase-firestore-compat.js"></script>
+<script src="assets/nuvem-config.js"></script>
+<script src="assets/nuvem.js"></script>
 <script src="assets/ui.js"></script>
 <script src="assets/dashboard.js"></script>
 <script src="assets/atualizacao.js"></script>
@@ -664,7 +670,8 @@ function abrir(f){
   $("dSign").innerHTML=[["producao","Produção Milplan"],["qualidade","Qualidade Milplan"],["fiscalizacao","Fiscalização Anglo"]].map(([k,l])=>`<div class="f"><label><input type="checkbox" data-sg="${k}" ${ed.assinaturas[k]?"checked":""}>${l}</label><input type="date" data-sgd="${k}" value="${ed.assinaturas[k]?.em||""}" ${ed.assinaturas[k]?"":"disabled"} aria-label="Data da assinatura ${l}"></div>`).join("");
   $("dSign").querySelectorAll("[data-sg]").forEach(cb=>cb.onchange=()=>{const d=$("dSign").querySelector(`[data-sgd="${cb.dataset.sg}"]`);d.disabled=!cb.checked;if(cb.checked&&!d.value)d.value=A.hoje()});
   $("btnExcluir").dataset.armed="";$("btnExcluir").textContent="Excluir ficha";
-  vTab="doc";vIdx=0;renderViewer();renderConf();$("devPanel").hidden=true;
+  vTab="doc";vIdx=0;renderViewer();
+  if(A.store.carregarAnexos){const alvo=ed;A.store.carregarAnexos(ed).then(()=>{if(ed===alvo)renderViewer()}).catch(()=>{})}renderConf();$("devPanel").hidden=true;
   renderItens();avisos();$("sheetBg").hidden=false;document.body.style.overflow="hidden";
 }
 function fechar(){$("sheetBg").hidden=true;document.body.style.overflow="";ed=null}
@@ -890,7 +897,8 @@ function linhasCert(){
   return fichas.filter(f=>f.tipo==="NF").flatMap(f=>A.itensValidos(f).map(it=>({f,it,idx:f.itens.indexOf(it),sit:A.certSituacao(f,it)}))).filter(x=>x.sit!=="nao_exige"&&(A.exigeCert(x.f,x.it)||A.temCert(x.it)))
     .sort((a,b)=>({pendente:0,recebido:1,validado:2}[a.sit]-{pendente:0,recebido:1,validado:2}[b.sit])||b.f.numero-a.f.numero||a.idx-b.idx);
 }
-function abrirArquivo(a){
+async function abrirArquivo(a){
+  if(a&&a.ref&&!a.img&&!a.data&&A.store.carregarAnexo){toast("Abrindo arquivo…");try{a=await A.store.carregarAnexo(a)}catch(e){toast("Não consegui baixar o arquivo.",true);return}}
   if(a.img){$("lbImg").src=a.img;$("lb").classList.remove("zoom");$("lb").hidden=false;return}
   if(a.data){try{const b=atob(a.data.split(",")[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.open(URL.createObjectURL(new Blob([u],{type:"application/pdf"})),"_blank")}catch(e){toast("Não consegui abrir o PDF.",true)}return}
   toast("Este PDF foi registrado só pelo nome (sem o arquivo).",true);
